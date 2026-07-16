@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrganIA - Organigrama de la Empresa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .chart {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+
+        .org-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 50px;
+        }
+
+        .level {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .level::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            border-top: 2px solid #ddd;
+        }
+
+        .level-1 {
+            gap: 60px;
+        }
+
+        .level-1::before {
+            display: none;
+        }
+
+        .position {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .position:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .position.ceo {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 25px;
+            font-size: 1.1rem;
+        }
+
+        .position.director {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .position.manager {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: #333;
+        }
+
+        .position.team {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+            font-size: 0.95rem;
+            padding: 15px;
+            min-width: 170px;
+        }
+
+        .name {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .role {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .department {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .line {
+            width: 2px;
+            height: 40px;
+            background: #ddd;
+            margin: 0 auto;
+        }
+
+        .line-horizontal {
+            height: 2px;
+            background: #ddd;
+            position: absolute;
+            top: -40px;
+        }
+
+        /* Conexiones visuales */
+        svg {
+            position: absolute;
+            top: -50px;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            z-index: -1;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 2px solid #eee;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .level {
+                gap: 20px;
+            }
+
+            .position {
+                min-width: 180px;
+                padding: 15px;
+            }
+
+            .chart {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏢 OrganIA</h1>
+            <p class="subtitle">Organigrama de la Empresa de Tecnología e Inteligencia Artificial</p>
+        </header>
+
+        <div class="chart">
+            <div class="org-tree">
+                <!-- Nivel Ejecutivo -->
+                <div class="level level-1">
+                    <div class="position ceo">
+                        <div class="name">Carlos Mendoza</div>
+                        <div class="role">CEO & Fundador</div>
+                        <div class="department">Dirección General</div>
+                    </div>
+                </div>
+
+                <div class="line"></div>
+
+                <!-- Nivel Directores -->
+                <div class="level">
+                    <div class="position director">
+                        <div class="name">María García</div>
+                        <div class="role">Directora Técnica</div>
+                        <div class="department">Engineering</div>
+                    </div>
+                    <div class="position director">
+                        <div class="name">Juan López</div>
+                        <div class="role">Director de Producto</div>
+                        <div class="department">Product</div>
+                    </div>
+                    <div class="position director">
+                        <div class="name">Laura Martínez</div>
+                        <div class="role">Directora de Operaciones</div>
+                        <div class="department">Operations</div>
+                    </div>
+                    <div class="position director">
+                        <div class="name">David Rodríguez</div>
+                        <div class="role">Director Comercial</div>
+                        <div class="department">Sales & Marketing</div>
+                    </div>
+                </div>
+
+                <div class="line"></div>
+
+                <!-- Nivel Managers -->
+                <div class="level">
+                    <!-- Engineering Team -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <div class="position manager">
+                            <div class="name">Ana Sánchez</div>
+                            <div class="role">Manager Frontend</div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="position team">
+                                <div class="name">Pedro Ruiz</div>
+                                <div class="role">React Developer</div>
+                            </div>
+                            <div class="position team">
+                                <div class="name">Sofia Chen</div>
+                                <div class="role">Vue Developer</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product Team -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <div class="position manager">
+                            <div class="name">Roberto Silva</div>
+                            <div class="role">Product Manager</div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="position team">
+                                <div class="name">Isabel Vargas</div>
+                                <div class="role">UX Designer</div>
+                            </div>
+                            <div class="position team">
+                                <div class="name">Marco Díaz</div>
+                                <div class="role">Data Analyst</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backend Team -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <div class="position manager">
+                            <div class="name">Elena Torres</div>
+                            <div class="role">Manager Backend</div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="position team">
+                                <div class="name">Lucas Fuentes</div>
+                                <div class="role">Python Developer</div>
+                            </div>
+                            <div class="position team">
+                                <div class="name">Valentina Gómez</div>
+                                <div class="role">DevOps Engineer</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI/ML Team -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                        <div class="position manager">
+                            <div class="name">Francisco Ruiz</div>
+                            <div class="role">Lead ML Engineer</div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="position team">
+                                <div class="name">Natalia Ramos</div>
+                                <div class="role">ML Specialist</div>
+                            </div>
+                            <div class="position team">
+                                <div class="name">Andrés Peña</div>
+                                <div class="role">Data Scientist</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number">25</div>
+                    <div class="stat-label">Empleados Totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Departamentos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Equipos Técnicos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">2024</div>
+                    <div class="stat-label">Año de Fundación</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Agregar interactividad a las posiciones
+        document.querySelectorAll('.position').forEach(position => {
+            position.addEventListener('click', function() {
+                const name = this.querySelector('.name').textContent;
+                const role = this.querySelector('.role').textContent;
+                alert(`${name}\n${role}`);
+            });
+        });
+    </script>
+</body>
+</html>
