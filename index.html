@@ -320,6 +320,196 @@
             opacity: 0.95;
         }
 
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .view-toggle-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 8px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .view-toggle-btn:hover,
+        .view-toggle-btn.active {
+            background: white;
+            color: #1e3c72;
+            border-color: white;
+        }
+
+        /* Vista de organigrama (árbol) */
+        .chart-view-wrapper {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow-x: auto;
+            padding: 50px 30px;
+        }
+
+        .org-tree,
+        .org-tree ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .org-tree {
+            min-width: max-content;
+        }
+
+        .org-tree li {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 40px 16px 0 16px;
+        }
+
+        .org-tree li::before,
+        .org-tree li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 50%;
+            width: 50%;
+            height: 40px;
+            border-top: 2px solid #c3cedf;
+        }
+
+        .org-tree li::after {
+            right: auto;
+            left: 50%;
+            border-left: 2px solid #c3cedf;
+        }
+
+        .org-tree li:only-child {
+            padding-top: 0;
+        }
+
+        .org-tree li:only-child::before,
+        .org-tree li:only-child::after {
+            display: none;
+        }
+
+        .org-tree li:first-child::before {
+            border: none;
+        }
+
+        .org-tree li:last-child::after {
+            border: none;
+        }
+
+        .org-tree li:last-child::before {
+            border-right: 2px solid #c3cedf;
+            border-radius: 0 6px 0 0;
+        }
+
+        .org-tree li:first-child::after {
+            border-radius: 6px 0 0 0;
+        }
+
+        .org-tree > li {
+            padding-top: 0;
+        }
+
+        .org-tree > li::before,
+        .org-tree > li::after {
+            display: none;
+        }
+
+        .org-tree ul::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            width: 0;
+            height: 40px;
+            border-left: 2px solid #c3cedf;
+        }
+
+        .org-card {
+            --accent: #2a5298;
+            background: white;
+            border: 1px solid #e5e9f0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            width: 190px;
+            overflow: hidden;
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .org-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .org-card-bar {
+            height: 4px;
+            background: var(--accent);
+        }
+
+        .org-card-body {
+            padding: 14px;
+        }
+
+        .org-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .org-card-name {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #1e3c72;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .org-card-tag {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .org-tag-label {
+            background: #eef1f7;
+            color: #7f8c8d;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            font-size: 0.6rem;
+            flex-shrink: 0;
+        }
+
+        .org-tag-value {
+            color: #2c3e50;
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8rem;
@@ -348,6 +538,10 @@
         <div class="container">
             <h1>OrganIA</h1>
             <p class="subtitle">Estructura Organizacional - Empresa de Tecnología e Inteligencia Artificial</p>
+            <div class="view-toggle">
+                <button class="view-toggle-btn active" data-view="list">📋 Vista Lista</button>
+                <button class="view-toggle-btn" data-view="chart">🌳 Vista Organigrama</button>
+            </div>
             <div class="filters">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
                 <button class="filter-btn" data-filter="engineering">🔧 Engineering</button>
@@ -360,6 +554,7 @@
 
     <main>
         <div class="container">
+            <div id="listView">
             <div class="org-structure" id="orgStructure">
                 <!-- Engineering -->
                 <div class="department-section" data-department="engineering">
@@ -697,6 +892,216 @@
                     <div class="stat-label">Año de Fundación</div>
                 </div>
             </div>
+            </div>
+
+            <!-- Vista de Organigrama (árbol) -->
+            <div id="chartView" style="display:none">
+                <div class="chart-view-wrapper">
+                    <ul class="org-tree">
+                        <li>
+                            <div class="org-card" style="--accent:#1e3c72">
+                                <div class="org-card-bar"></div>
+                                <div class="org-card-body">
+                                    <div class="org-avatar">CM</div>
+                                    <div class="org-card-name">Carlos Mendoza</div>
+                                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">CEO & Fundador</span></div>
+                                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Dirección General</span></div>
+                                </div>
+                            </div>
+                            <ul>
+                                <li>
+                                    <div class="org-card" style="--accent:#2a5298">
+                                        <div class="org-card-bar"></div>
+                                        <div class="org-card-body">
+                                            <div class="org-avatar">MG</div>
+                                            <div class="org-card-name">María García</div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Directora Técnica</span></div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                        </div>
+                                    </div>
+                                    <ul>
+                                        <li>
+                                            <div class="org-card" style="--accent:#2a5298">
+                                                <div class="org-card-bar"></div>
+                                                <div class="org-card-body">
+                                                    <div class="org-avatar">AS</div>
+                                                    <div class="org-card-name">Ana Sánchez</div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Manager Frontend</span></div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                </div>
+                                            </div>
+                                            <ul>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">PR</div>
+                                                            <div class="org-card-name">Pedro Ruiz</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">React Developer</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">SC</div>
+                                                            <div class="org-card-name">Sofia Chen</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Vue Developer</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <div class="org-card" style="--accent:#2a5298">
+                                                <div class="org-card-bar"></div>
+                                                <div class="org-card-body">
+                                                    <div class="org-avatar">ET</div>
+                                                    <div class="org-card-name">Elena Torres</div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Manager Backend</span></div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                </div>
+                                            </div>
+                                            <ul>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">LF</div>
+                                                            <div class="org-card-name">Lucas Fuentes</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Python Developer</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">VG</div>
+                                                            <div class="org-card-name">Valentina Gómez</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">DevOps Engineer</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            <div class="org-card" style="--accent:#2a5298">
+                                                <div class="org-card-bar"></div>
+                                                <div class="org-card-body">
+                                                    <div class="org-avatar">FR</div>
+                                                    <div class="org-card-name">Francisco Ruiz</div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Lead ML Engineer</span></div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                </div>
+                                            </div>
+                                            <ul>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">NR</div>
+                                                            <div class="org-card-name">Natalia Ramos</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">ML Specialist</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#2a5298">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">AP</div>
+                                                            <div class="org-card-name">Andrés Peña</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Data Scientist</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Engineering</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <div class="org-card" style="--accent:#8e44ad">
+                                        <div class="org-card-bar"></div>
+                                        <div class="org-card-body">
+                                            <div class="org-avatar">JL</div>
+                                            <div class="org-card-name">Juan López</div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Director de Producto</span></div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Product</span></div>
+                                        </div>
+                                    </div>
+                                    <ul>
+                                        <li>
+                                            <div class="org-card" style="--accent:#8e44ad">
+                                                <div class="org-card-bar"></div>
+                                                <div class="org-card-body">
+                                                    <div class="org-avatar">RS</div>
+                                                    <div class="org-card-name">Roberto Silva</div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Product Manager</span></div>
+                                                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Product</span></div>
+                                                </div>
+                                            </div>
+                                            <ul>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#8e44ad">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">IV</div>
+                                                            <div class="org-card-name">Isabel Vargas</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">UX Designer</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Product</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li>
+                                                    <div class="org-card" style="--accent:#8e44ad">
+                                                        <div class="org-card-bar"></div>
+                                                        <div class="org-card-body">
+                                                            <div class="org-avatar">MD</div>
+                                                            <div class="org-card-name">Marco Díaz</div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Data Analyst</span></div>
+                                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Product</span></div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <div class="org-card" style="--accent:#e67e22">
+                                        <div class="org-card-bar"></div>
+                                        <div class="org-card-body">
+                                            <div class="org-avatar">LM</div>
+                                            <div class="org-card-name">Laura Martínez</div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Directora de Operaciones</span></div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Operations</span></div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="org-card" style="--accent:#27ae60">
+                                        <div class="org-card-bar"></div>
+                                        <div class="org-card-body">
+                                            <div class="org-avatar">DR</div>
+                                            <div class="org-card-name">David Rodríguez</div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">Director Comercial</span></div>
+                                            <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">Sales & Marketing</span></div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -716,6 +1121,19 @@
             content.classList.toggle('collapsed');
             icon.classList.toggle('collapsed');
         }
+
+        // Alternar entre Vista Lista y Vista Organigrama
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const view = this.dataset.view;
+                document.getElementById('listView').style.display = view === 'list' ? '' : 'none';
+                document.getElementById('chartView').style.display = view === 'chart' ? '' : 'none';
+                document.querySelector('.filters').style.display = view === 'list' ? 'flex' : 'none';
+            });
+        });
 
         // Filtros
         document.querySelectorAll('.filter-btn').forEach(btn => {
