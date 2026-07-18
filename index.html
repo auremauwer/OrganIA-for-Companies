@@ -1134,9 +1134,7 @@
 
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
-    </script>
-</body>
-</html>
+
         // Búsqueda y Filtrado
         const searchInput = document.getElementById('searchInput');
         const expandAllBtn = document.getElementById('expandAllBtn');
@@ -1145,7 +1143,7 @@
         function performSearch(query) {
             const lowerQuery = query.toLowerCase();
             const items = document.querySelectorAll('.org-position, [data-department-name]');
-            
+
             items.forEach(item => {
                 const text = item.textContent.toLowerCase();
                 if (text.includes(lowerQuery) || query === '') {
@@ -1185,4 +1183,7 @@
         }
         if (expandAllBtn) expandAllBtn.addEventListener('click', expandAll);
         if (collapseAllBtn) collapseAllBtn.addEventListener('click', collapseAll);
+    </script>
+</body>
+</html>
 
