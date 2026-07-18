@@ -1015,6 +1015,9 @@
             const card = document.createElement('div');
             card.className = 'org-card';
             card.style.setProperty('--accent', node.accent);
+            const hasChildren = !!(node.children && node.children.length);
+            const directos = hasChildren ? node.children.length : 0;
+            const total = hasChildren ? countTotal(node) : 0;
             card.innerHTML = `
                 <div class="org-card-bar"></div>
                 <div class="org-card-body">
@@ -1022,12 +1025,11 @@
                     <div class="org-card-name">${node.name}</div>
                     <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">${node.role}</span></div>
                     <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">${node.team}</span></div>
+                    ${hasChildren ? `<div class="org-card-tag"><span class="org-tag-label">Reportes</span><span class="org-tag-value">${directos} directo${directos > 1 ? 's' : ''} · ${total} en total</span></div>` : ''}
                 </div>`;
             li.appendChild(card);
 
-            if (node.children && node.children.length) {
-                const directos = node.children.length;
-                const total = countTotal(node);
+            if (hasChildren) {
                 card.classList.add('has-children');
                 card.title = `${directos} reportes directos · ${total} personas en total`;
 
