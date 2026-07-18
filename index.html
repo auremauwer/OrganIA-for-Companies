@@ -1286,18 +1286,149 @@
         document.getElementById('orgTreeRoot').appendChild(buildNode(ORG_DATA));
 
         // Alternar entre vistas (Lista, Organigrama, Quiénes Somos)
-        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
 
-                const view = this.dataset.view;
-                document.getElementById('listView').style.display = view === 'list' ? '' : 'none';
-                document.getElementById('chartView').style.display = view === 'chart' ? '' : 'none';
-                document.getElementById('aboutView').style.display = view === 'about' ? '' : 'none';
-                document.querySelector('.filters').style.display = view === 'list' ? 'flex' : 'none';
-            });
+        // Procesar ORG_DATA y generar estadísticas
+        function countEmployees(node) {
+            let count = 1;
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => {
+                    count += countEmployees(child);
+                });
+            }
+            return count;
+        }
+
+        function getDepartments(node, depts = new Set()) {
+            if (node.team) depts.add(node.team);
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => getDepartments(child, depts));
+            }
+            return depts;
+        }
+
+        function buildNode(node, depth = 0) {
+            const li = document.createElement('li');
+            const accent = node.accent || '#2a5298';
+            const hasChildren = node.children && node.children.length > 0;
+            const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
+            const directChildren = hasChildren ? node.children.length : 0;
+
+            const expandClass = hasChildren ? 'expandable' : '';
+            const html = `
+                <div class="org-card" data-accent="${accent}">
+                    <div class="org-card-header">
+                        <div class="org-card-title">
+                            <span class="org-card-name">${node.name}</span>
+                            <span class="org-card-role">${node.role}</span>
+                        </div>
+                        ${hasChildren ? `<div class="org-badge">👥 ${directChildren} directo(s), ${totalChildren} total</div>` : ''}
+                    </div>
+                    <div class="org-card-body">
+                        ${node.team ? `<div class="org-team">${node.team}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            li.innerHTML = html;
+            li.querySelector('.org-card').style.borderLeftColor = accent;
+
+            if (hasChildren) {
+                li.classList.add(expandClass);
+                const ul = document.createElement('ul');
+                node.children.forEach(child => ul.appendChild(buildNode(child, depth + 1)));
+                li.appendChild(ul);
+
+                const card = li.querySelector('.org-card');
+                card.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const ul = card.parentElement.querySelector('ul');
+                    if (ul) {
+                        ul.style.display = ul.style.display === 'none' ? 'block' : 'none';
+                    }
+                });
+            }
+
+            return li;
+        }
+
+        const totalEmployees = countEmployees(ORG_DATA);
+        const departments = getDepartments(ORG_DATA);
+        const chiefs = (ORG_DATA.children || []).filter(c => c.role && c.role.includes('Chief')).length;
+
+        // Actualizar estadísticas en ambas vistas
+        document.querySelectorAll('.stats-container').forEach(container => {
+            const cards = container.querySelectorAll('.stat-card');
+            if (cards[0]) cards[0].querySelector('.stat-number').textContent = totalEmployees;
+            if (cards[1]) cards[1].querySelector('.stat-number').textContent = departments.size;
+            if (cards[2]) cards[2].querySelector('.stat-number').textContent = chiefs;
         });
+
+        // Renderizar árbol organizacional
+        document.getElementById('orgTreeRoot').appendChild(buildNode(ORG_DATA));
+
+        // Generar vista de lista dinámicamente
+        function buildListView() {
+            const container = document.getElementById('orgStructure');
+            container.innerHTML = '';
+
+            function addNodeToList(node, parentDept = null) {
+                const dept = node.team || parentDept;
+                if (!dept) return;
+
+                let section = document.querySelector(`[data-department-name="${dept}"]`);
+                if (!section) {
+                    section = document.createElement('div');
+                    section.className = 'department-section';
+                    section.setAttribute('data-department-name', dept);
+                    section.innerHTML = `
+                        <div class="dept-header" onclick="toggleDepartment(this)">
+                            <div class="dept-title">
+                                <span>${dept}</span>
+                            </div>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="dept-content">
+                            <div class="hierarchy"></div>
+                        </div>
+                    `;
+                    container.appendChild(section);
+                }
+
+                const hierarchy = section.querySelector('.hierarchy');
+                const posDiv = document.createElement('div');
+                posDiv.className = 'org-position';
+                posDiv.innerHTML = `
+                    <div class="position-header" onclick="togglePosition(this)">
+                        <div class="position-info">
+                            <div class="person-name">${node.name}</div>
+                            <div class="person-role">${node.role}</div>
+                        </div>
+                        <span class="position-expand">▼</span>
+                    </div>
+                    <div class="position-details">
+                        <div class="detail-content">
+                            <div class="detail-item">
+                                <span class="detail-label">Rol</span>
+                                <span class="detail-value">${node.role}</span>
+                            </div>
+                            ${node.team ? `<div class="detail-item">
+                                <span class="detail-label">Departamento</span>
+                                <span class="detail-value">${node.team}</span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                `;
+                hierarchy.appendChild(posDiv);
+
+                if (node.children && node.children.length > 0) {
+                    node.children.forEach(child => addNodeToList(child, dept));
+                }
+            }
+
+            addNodeToList(ORG_DATA);
+        }
+
+        buildListView();
+
 
         // Filtros
         document.querySelectorAll('.filter-btn').forEach(btn => {
