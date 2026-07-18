@@ -1101,159 +1101,179 @@
 
         // ---- Datos y construcción del organigrama (Vista Árbol) ----
         const ORG_DATA = {
-            name: 'Carlos Mendoza', role: 'CEO & Fundador', team: 'Dirección General', accent: '#1e3c72',
+            name: 'Carlos Mendoza', role: 'Chief Executive Officer', team: 'Dirección General', accent: '#1e3c72',
             children: [
-                { name: 'María García', role: 'VP Engineering', team: 'Engineering', accent: '#2a5298',
+                { name: 'Magdalena Flores', role: 'Asistente Ejecutivo', team: 'Dirección General', accent: '#1e3c72' },
+                { name: 'Dr. Santiago Rivera', role: 'Chief Technology Officer', team: 'Tecnología', accent: '#2a5298',
                   children: [
-                    { name: 'Ana Sánchez', role: 'Engineering Manager Frontend', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Alejandro Gómez', role: 'VP Engineering', team: 'Tecnología', accent: '#2a5298',
                       children: [
-                        { name: 'Pedro Ruiz', role: 'React Developer Senior' },
-                        { name: 'Sofia Chen', role: 'React Developer' },
-                        { name: 'Marco López', role: 'Vue Developer' },
-                        { name: 'Laura Pérez', role: 'Frontend Developer' }
+                        { name: 'Pedro Ruiz', role: 'Engineering Lead Frontend' },
+                        { name: 'Sofia Chen', role: 'Senior Developer Frontend' },
+                        { name: 'Marco López', role: 'Frontend Specialist' }
                       ]},
-                    { name: 'Elena Torres', role: 'Engineering Manager Backend', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Valentina Soto', role: 'VP Backend Services', team: 'Tecnología', accent: '#2a5298',
                       children: [
-                        { name: 'Lucas Fuentes', role: 'Backend Developer Senior' },
-                        { name: 'Valentina Gómez', role: 'DevOps Engineer' },
-                        { name: 'Carlos Díaz', role: 'Backend Developer' },
-                        { name: 'Juliana Mora', role: 'Backend Developer' },
-                        { name: 'Andrés Rivas', role: 'Database Administrator' }
+                        { name: 'Lucas Fuentes', role: 'Backend Lead' },
+                        { name: 'Gabriela Santos', role: 'Senior Backend Engineer' },
+                        { name: 'Roberto Campos', role: 'API Specialist' }
                       ]},
-                    { name: 'Francisco Ruiz', role: 'Lead ML Engineer', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Andrés Castillo', role: 'VP Infrastructure', team: 'Tecnología', accent: '#2a5298',
                       children: [
-                        { name: 'Natalia Ramos', role: 'ML Engineer Senior' },
-                        { name: 'Diego Santana', role: 'ML Engineer' },
-                        { name: 'Gabriela Santos', role: 'Data Scientist' },
-                        { name: 'Roberto Campos', role: 'Data Scientist' }
+                        { name: 'Valentina Gómez', role: 'DevOps Lead' },
+                        { name: 'Catalina López', role: 'Cloud Infrastructure Specialist' },
+                        { name: 'Raúl Mendez', role: 'Database Administrator' }
                       ]},
-                    { name: 'Javier Medina', role: 'QA Manager', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Isabel Vargas', role: 'VP Security & QA', team: 'Tecnología', accent: '#2a5298',
                       children: [
-                        { name: 'Isabel Castro', role: 'QA Engineer Senior' },
-                        { name: 'Camila Flores', role: 'QA Engineer' },
-                        { name: 'Raúl Mendez', role: 'QA Automation Engineer' },
-                        { name: 'Daniela Jiménez', role: 'QA Engineer' }
-                      ]},
-                    { name: 'Sergio Vargas', role: 'Technical Lead', team: 'Engineering', accent: '#2a5298',
-                      children: [
-                        { name: 'Alejandro Gómez', role: 'Senior Developer' },
-                        { name: 'Catalina López', role: 'Senior Developer' }
+                        { name: 'Javier Medina', role: 'QA Lead' },
+                        { name: 'Camila Flores', role: 'Security Specialist' },
+                        { name: 'Diego Santana', role: 'QA Automation Engineer' }
                       ]}
                   ]},
-                { name: 'Juan López', role: 'VP Producto', team: 'Product', accent: '#8e44ad',
+                { name: 'Dra. Marcela Hidalgo', role: 'Chief Data Officer', team: 'Datos', accent: '#8e44ad',
                   children: [
-                    { name: 'Roberto Silva', role: 'Senior Product Manager', team: 'Product', accent: '#8e44ad',
+                    { name: 'Roberto Silva', role: 'Head of Data Engineering', team: 'Datos', accent: '#8e44ad',
                       children: [
-                        { name: 'Isabel Vargas', role: 'UX/UI Designer Senior' },
-                        { name: 'Marco Díaz', role: 'Product Analyst' },
-                        { name: 'Sandra González', role: 'Product Designer' }
+                        { name: 'Natalia Ramos', role: 'Senior Data Engineer' },
+                        { name: 'Francisco Ruiz', role: 'Data Pipeline Specialist' },
+                        { name: 'Ximena Vega', role: 'ETL Developer' }
                       ]},
-                    { name: 'Beatriz Sánchez', role: 'Product Manager', team: 'Product', accent: '#8e44ad',
+                    { name: 'Beatriz Sánchez', role: 'Head of Analytics', team: 'Datos', accent: '#8e44ad',
                       children: [
-                        { name: 'Felipe Rosales', role: 'Product Designer' },
-                        { name: 'Mariana Ruiz', role: 'User Researcher' }
+                        { name: 'Felipe Rosales', role: 'Analytics Lead' },
+                        { name: 'Mariana Ruiz', role: 'Business Intelligence Analyst' },
+                        { name: 'Emilio Soto', role: 'Analytics Specialist' }
                       ]},
-                    { name: 'Vicente Morales', role: 'Product Manager Growth', team: 'Product', accent: '#8e44ad',
+                    { name: 'Vicente Morales', role: 'Head of Machine Learning', team: 'Datos', accent: '#8e44ad',
                       children: [
-                        { name: 'Ximena Vega', role: 'Growth Analyst' },
-                        { name: 'Emilio Soto', role: 'Product Analyst' }
+                        { name: 'Joaquín Poblete', role: 'ML Engineer Senior' },
+                        { name: 'Carla Quintanilla', role: 'ML Specialist' },
+                        { name: 'Rodrigo Sepúlveda', role: 'ML Researcher' }
                       ]}
                   ]},
-                { name: 'Laura Martínez', role: 'VP Operaciones', team: 'Operations', accent: '#e67e22',
+                { name: 'Claudia Moreno', role: 'Chief Human Resources Officer', team: 'RRHH', accent: '#e74c3c',
                   children: [
-                    { name: 'Cristina López', role: 'HR Manager', team: 'Operations', accent: '#e67e22',
+                    { name: 'Rodrigo Núñez', role: 'Head of Recruitment', team: 'RRHH', accent: '#e74c3c',
                       children: [
-                        { name: 'Rodrigo Núñez', role: 'HR Specialist' },
-                        { name: 'Valentina Araya', role: 'Recruiter' },
-                        { name: 'Pamela Hidalgo', role: 'HR Coordinator' }
+                        { name: 'Valentina Araya', role: 'Senior Recruiter' },
+                        { name: 'Pamela Hidalgo', role: 'Talent Acquisition Specialist' },
+                        { name: 'Lisandro Fuentes', role: 'Recruitment Coordinator' }
                       ]},
-                    { name: 'Hernán Flores', role: 'Finance Manager', team: 'Operations', accent: '#e67e22',
+                    { name: 'Daniela Jiménez', role: 'Head of People Operations', team: 'RRHH', accent: '#e74c3c',
                       children: [
-                        { name: 'Lorena Mendoza', role: 'Accountant Senior' },
-                        { name: 'Gustavo Ortiz', role: 'Financial Analyst' }
+                        { name: 'Mauricio Sanhueza', role: 'HR Operations Manager' },
+                        { name: 'Gabriela Núñez', role: 'Benefits Administrator' },
+                        { name: 'Sandra González', role: 'Employee Relations Specialist' }
                       ]},
-                    { name: 'Silvia Cardona', role: 'Operations Manager', team: 'Operations', accent: '#e67e22',
+                    { name: 'Luis Contreras', role: 'Head of Learning & Development', team: 'RRHH', accent: '#e74c3c',
                       children: [
-                        { name: 'Fabricio Patel', role: 'Operations Specialist' },
-                        { name: 'Constanza Riquelme', role: 'Office Manager' }
+                        { name: 'Francisca Leiva', role: 'Training Coordinator' },
+                        { name: 'Tomás Herrera', role: 'L&D Specialist' }
                       ]}
                   ]},
-                { name: 'David Rodríguez', role: 'VP Sales & Marketing', team: 'Sales & Marketing', accent: '#27ae60',
+                { name: 'Jorge Martínez', role: 'Chief Operations Officer', team: 'Operaciones', accent: '#e67e22',
                   children: [
-                    { name: 'Pilar Fuentes', role: 'Sales Director', team: 'Sales & Marketing', accent: '#27ae60',
+                    { name: 'Lorena Mendoza', role: 'Head of Supply Chain', team: 'Operaciones', accent: '#e67e22',
                       children: [
-                        { name: 'Tomás Herrera', role: 'Enterprise Account Executive' },
-                        { name: 'Carolina Bravo', role: 'Account Executive' },
-                        { name: 'Miguel Arraya', role: 'Sales Development Rep' },
-                        { name: 'Francisca Leiva', role: 'Sales Development Rep' }
+                        { name: 'Gustavo Ortiz', role: 'Supply Chain Manager' },
+                        { name: 'Carolina Bravo', role: 'Procurement Specialist' },
+                        { name: 'Silvia Cardona', role: 'Logistics Coordinator' }
                       ]},
-                    { name: 'Andrés Castillo', role: 'Marketing Manager', team: 'Sales & Marketing', accent: '#27ae60',
+                    { name: 'Fabricio Patel', role: 'Head of Facilities', team: 'Operaciones', accent: '#e67e22',
                       children: [
-                        { name: 'Valeria Zamora', role: 'Content Marketing Manager' },
-                        { name: 'Joaquín Poblete', role: 'Digital Marketing Specialist' },
-                        { name: 'Carla Quintanilla', role: 'Social Media Manager' },
-                        { name: 'Rodrigo Sepúlveda', role: 'Marketing Analyst' }
+                        { name: 'Constanza Riquelme', role: 'Facilities Manager' },
+                        { name: 'Miguel Arraya', role: 'Maintenance Specialist' }
                       ]},
-                    { name: 'Mauricio Sanhueza', role: 'Channel Partner Manager', team: 'Sales & Marketing', accent: '#27ae60',
+                    { name: 'Pilar Fuentes', role: 'Head of Vendor Management', team: 'Operaciones', accent: '#e67e22',
                       children: [
-                        { name: 'Gabriela Núñez', role: 'Partner Manager' },
-                        { name: 'Lisandro Fuentes', role: 'Channel Coordinator' }
+                        { name: 'Tomás Herrera', role: 'Vendor Manager' },
+                        { name: 'Carolina Bravo', role: 'Contract Specialist' }
+                      ]}
+                  ]},
+                { name: 'Fernando López', role: 'Chief Financial Officer', team: 'Finanzas', accent: '#27ae60',
+                  children: [
+                    { name: 'Rocío García', role: 'Head of Accounting', team: 'Finanzas', accent: '#27ae60',
+                      children: [
+                        { name: 'Julio Morales', role: 'Senior Accountant' },
+                        { name: 'Patricia Zambrano', role: 'Accounts Payable Manager' },
+                        { name: 'Vicente Soto', role: 'Financial Analyst' }
+                      ]},
+                    { name: 'Marcelo Díaz', role: 'Head of Financial Planning', team: 'Finanzas', accent: '#27ae60',
+                      children: [
+                        { name: 'Alejandra Herrera', role: 'FP&A Manager' },
+                        { name: 'Roberto Valencia', role: 'Budget Analyst' },
+                        { name: 'Lorena Pacheco', role: 'Finance Analyst' }
+                      ]},
+                    { name: 'Ricardo Flores', role: 'Head of Treasury', team: 'Finanzas', accent: '#27ae60',
+                      children: [
+                        { name: 'Daniela Correa', role: 'Treasury Manager' },
+                        { name: 'Sergio Vargas', role: 'Cash Management Specialist' }
+                      ]}
+                  ]},
+                { name: 'Andrés Pérez', role: 'Chief Marketing Officer', team: 'Marketing', accent: '#16a085',
+                  children: [
+                    { name: 'Valeria Zamora', role: 'Head of Product Marketing', team: 'Marketing', accent: '#16a085',
+                      children: [
+                        { name: 'Joaquín López', role: 'Product Marketing Manager' },
+                        { name: 'Carla Mendez', role: 'Marketing Strategist' },
+                        { name: 'Fabián Rojas', role: 'Content Specialist' }
+                      ]},
+                    { name: 'Ximena González', role: 'Head of Digital Marketing', team: 'Marketing', accent: '#16a085',
+                      children: [
+                        { name: 'Rodrigo Sepúlveda', role: 'Digital Marketing Manager' },
+                        { name: 'Patricia Molina', role: 'Social Media Specialist' },
+                        { name: 'Luis Ibáñez', role: 'SEO/SEM Specialist' }
+                      ]},
+                    { name: 'Natalia Silva', role: 'Head of Brand & Communications', team: 'Marketing', accent: '#16a085',
+                      children: [
+                        { name: 'Gabriela Torres', role: 'Communications Manager' },
+                        { name: 'Marcelo Ruiz', role: 'Brand Specialist' }
+                      ]}
+                  ]},
+                { name: 'Dr. Hernán Flores', role: 'Chief Legal Officer', team: 'Legal', accent: '#2980b9',
+                  children: [
+                    { name: 'Sofía Vega', role: 'Head of Corporate Law', team: 'Legal', accent: '#2980b9',
+                      children: [
+                        { name: 'Andrés Castillo', role: 'Corporate Counsel' },
+                        { name: 'Valentina López', role: 'Legal Analyst' },
+                        { name: 'Roberto Núñez', role: 'Contracts Attorney' }
+                      ]},
+                    { name: 'Javier Romero', role: 'Head of Compliance', team: 'Legal', accent: '#2980b9',
+                      children: [
+                        { name: 'Marina Salazar', role: 'Compliance Manager' },
+                        { name: 'Diego Fuentes', role: 'Compliance Analyst' }
+                      ]}
+                  ]},
+                { name: 'Patricia Estrada', role: 'Chief Risk Officer', team: 'Riesgo', accent: '#c0392b',
+                  children: [
+                    { name: 'Francisco Jara', role: 'Head of Enterprise Risk', team: 'Riesgo', accent: '#c0392b',
+                      children: [
+                        { name: 'Isabela Mendoza', role: 'Risk Manager' },
+                        { name: 'Carlos Acuña', role: 'Risk Analyst' },
+                        { name: 'Verónica Torres', role: 'Risk Assessment Specialist' }
+                      ]},
+                    { name: 'Mauricio Flores', role: 'Head of Operational Risk', team: 'Riesgo', accent: '#c0392b',
+                      children: [
+                        { name: 'Alejandra Sánchez', role: 'Operations Risk Manager' },
+                        { name: 'Rodrigo Garrido', role: 'Risk Analyst' }
+                      ]}
+                  ]},
+                { name: 'Elena Castillo', role: 'Chief Sustainability Officer', team: 'Sustentabilidad', accent: '#27ae60',
+                  children: [
+                    { name: 'Guillermo Saldes', role: 'Head of ESG Initiatives', team: 'Sustentabilidad', accent: '#27ae60',
+                      children: [
+                        { name: 'Natalia Parra', role: 'ESG Manager' },
+                        { name: 'Javier Soto', role: 'Sustainability Analyst' }
+                      ]},
+                    { name: 'Rosario López', role: 'Head of Environmental Affairs', team: 'Sustentabilidad', accent: '#27ae60',
+                      children: [
+                        { name: 'Marcelo Aguirre', role: 'Environmental Coordinator' },
+                        { name: 'Laura Vásquez', role: 'Environmental Specialist' }
                       ]}
                   ]}
             ]
         }
-
-        function countTotal(node) {
-            if (!node.children) return 0;
-            return node.children.reduce((sum, c) => sum + 1 + countTotal(c), 0);
-        }
-
-        function initials(name) {
-            return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-        }
-
-        function buildNode(node) {
-            const li = document.createElement('li');
-            const card = document.createElement('div');
-            card.className = 'org-card';
-            card.style.setProperty('--accent', node.accent);
-            const hasChildren = !!(node.children && node.children.length);
-            const directos = hasChildren ? node.children.length : 0;
-            const total = hasChildren ? countTotal(node) : 0;
-            card.innerHTML = `
-                <div class="org-card-bar"></div>
-                <div class="org-card-body">
-                    <div class="org-avatar">${initials(node.name)}</div>
-                    <div class="org-card-name">${node.name}</div>
-                    <div class="org-card-tag"><span class="org-tag-label">Rol</span><span class="org-tag-value">${node.role}</span></div>
-                    <div class="org-card-tag"><span class="org-tag-label">Equipo</span><span class="org-tag-value">${node.team}</span></div>
-                    ${hasChildren ? `<div class="org-card-tag"><span class="org-tag-label">Reportes</span><span class="org-tag-value">${directos} directo${directos > 1 ? 's' : ''} · ${total} en total</span></div>` : ''}
-                </div>`;
-            li.appendChild(card);
-
-            if (hasChildren) {
-                card.classList.add('has-children');
-                card.title = `${directos} reportes directos · ${total} personas en total`;
-
-                const badge = document.createElement('span');
-                badge.className = 'org-count-badge';
-                card.appendChild(badge);
-
-                const hint = document.createElement('div');
-                hint.className = 'org-toggle-hint';
-                card.querySelector('.org-card-body').appendChild(hint);
-
-                const ul = document.createElement('ul');
-                node.children.forEach(child => ul.appendChild(buildNode(child)));
-                li.appendChild(ul);
-
-                const refresh = () => {
-                    const collapsed = li.classList.contains('node-collapsed');
-                    badge.textContent = collapsed ? `👥 ${directos} · ${total}` : '−';
-                    hint.textContent = collapsed
-                        ? `▸ Ver ${directos} reporte${directos > 1 ? 's' : ''} directo${directos > 1 ? 's' : ''}`
-                        : '▾ Contraer equipo';
-                };
                 card.addEventListener('click', () => {
                     li.classList.toggle('node-collapsed');
                     refresh();
