@@ -556,6 +556,57 @@
             line-height: 1.3;
         }
 
+        #aboutView {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 40px;
+        }
+
+        .about-section {
+            margin-bottom: 40px;
+        }
+
+        .about-section h2 {
+            font-size: 1.8rem;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .about-section p {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .value-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #2a5298;
+        }
+
+        .value-card h3 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .value-card p {
+            font-size: 0.95rem;
+            color: #666;
+            margin: 0;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8rem;
@@ -576,6 +627,14 @@
             .team-list {
                 grid-template-columns: 1fr;
             }
+
+            #aboutView {
+                padding: 20px;
+            }
+
+            .about-section h2 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
@@ -585,8 +644,9 @@
             <h1>OrganIA</h1>
             <p class="subtitle">Estructura Organizacional - Empresa de Tecnología e Inteligencia Artificial</p>
             <div class="view-toggle">
-                <button class="view-toggle-btn active" data-view="list">📋 Vista Lista</button>
-                <button class="view-toggle-btn" data-view="chart">🌳 Vista Organigrama</button>
+                <button class="view-toggle-btn active" data-view="list">Vista Lista</button>
+                <button class="view-toggle-btn" data-view="chart">Vista Organigrama</button>
+                <button class="view-toggle-btn" data-view="about">¿Quiénes Somos?</button>
             </div>
             <div class="filters">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
@@ -601,6 +661,21 @@
     <main>
         <div class="container">
             <div id="listView">
+            <!-- Estadísticas arriba -->
+            <div class="stats-container" style="margin-bottom: 40px;">
+                <div class="stat-card">
+                    <div class="stat-number">105</div>
+                    <div class="stat-label">Empleados Totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Departamentos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Junta Ejecutiva</div>
+                </div>
+            </div>
             <div class="org-structure" id="orgStructure">
                 <!-- Engineering -->
                 <div class="department-section" data-department="engineering">
@@ -918,32 +993,90 @@
                     </div>
                 </div>
             </div>
+            </div>
 
-            <!-- Estadísticas -->
-            <div class="stats-container">
+            <!-- Vista de Organigrama (árbol) -->
+            <div id="chartView" style="display:none">
+            <!-- Estadísticas arriba -->
+            <div class="stats-container" style="margin-bottom: 40px;">
                 <div class="stat-card">
-                    <div class="stat-number">25</div>
+                    <div class="stat-number">105</div>
                     <div class="stat-label">Empleados Totales</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">4</div>
+                    <div class="stat-number">5</div>
                     <div class="stat-label">Departamentos</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">1</div>
                     <div class="stat-label">Junta Ejecutiva</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">2024</div>
-                    <div class="stat-label">Año de Fundación</div>
-                </div>
             </div>
-            </div>
-
-            <!-- Vista de Organigrama (árbol) -->
-            <div id="chartView" style="display:none">
                 <div class="chart-view-wrapper">
                     <ul class="org-tree" id="orgTreeRoot"></ul>
+                </div>
+            </div>
+
+            <!-- Vista: ¿Quiénes Somos? -->
+            <div id="aboutView" style="display:none">
+                <div class="about-section">
+                    <h2>Sobre OrganIA</h2>
+                    <p>OrganIA es una empresa líder en tecnología e inteligencia artificial, dedicada a transformar ideas en soluciones innovadoras que impactan positivamente en el mundo. Con más de 100 profesionales talentosos en nuestro equipo, nos enfocamos en crear productos de alta calidad que resuelven problemas complejos.</p>
+                    <p>Fundada en 2024, nuestra misión es democratizar el acceso a tecnologías avanzadas de IA y proporcionar herramientas que permitan a las organizaciones operar más eficientemente y tomar decisiones basadas en datos.</p>
+                </div>
+
+                <div class="about-section">
+                    <h2>Nuestra Misión</h2>
+                    <p>Transformar la forma en que las organizaciones utilizan la inteligencia artificial para resolver problemas, mejorar procesos y crear valor. Creemos que la tecnología debe ser accesible, intuitiva y centrada en el usuario.</p>
+                </div>
+
+                <div class="about-section">
+                    <h2>Nuestros Valores</h2>
+                    <div class="values-grid">
+                        <div class="value-card">
+                            <h3>Innovación</h3>
+                            <p>Continuamente buscamos nuevas formas de resolver problemas y mejorar nuestras soluciones.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Excelencia</h3>
+                            <p>Nos comprometemos con la calidad en todo lo que hacemos, desde el código hasta el servicio al cliente.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Colaboración</h3>
+                            <p>Creemos en el poder del trabajo en equipo y en la diversidad de perspectivas.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Integridad</h3>
+                            <p>Actuamos con honestidad y transparencia en todas nuestras interacciones y decisiones.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="about-section">
+                    <h2>Nuestro Equipo</h2>
+                    <p>Con más de 100 talentosos profesionales distribuidos en 5 departamentos principales, OrganIA cuenta con expertos en ingeniería, producto, operaciones, ventas y marketing. Nuestro equipo está comprometido con la excelencia y la innovación continua.</p>
+                </div>
+
+                <div class="about-section">
+                    <h2>Áreas Clave</h2>
+                    <div class="values-grid">
+                        <div class="value-card">
+                            <h3>Engineering</h3>
+                            <p>40+ ingenieros trabajando en frontend, backend, DevOps, QA y machine learning.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Producto</h3>
+                            <p>20+ profesionales enfocados en diseño, análisis y gestión de producto.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Ventas & Marketing</h3>
+                            <p>20+ especialistas en estrategia comercial y marketing digital.</p>
+                        </div>
+                        <div class="value-card">
+                            <h3>Operaciones</h3>
+                            <p>20+ profesionales en RRHH, finanzas y operaciones empresariales.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -970,36 +1103,105 @@
         const ORG_DATA = {
             name: 'Carlos Mendoza', role: 'CEO & Fundador', team: 'Dirección General', accent: '#1e3c72',
             children: [
-                { name: 'María García', role: 'Directora Técnica', team: 'Engineering', accent: '#2a5298',
+                { name: 'María García', role: 'VP Engineering', team: 'Engineering', accent: '#2a5298',
                   children: [
-                    { name: 'Ana Sánchez', role: 'Manager Frontend', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Ana Sánchez', role: 'Engineering Manager Frontend', team: 'Engineering', accent: '#2a5298',
                       children: [
-                        { name: 'Pedro Ruiz', role: 'React Developer', team: 'Engineering', accent: '#2a5298' },
-                        { name: 'Sofia Chen', role: 'Vue Developer', team: 'Engineering', accent: '#2a5298' }
+                        { name: 'Pedro Ruiz', role: 'React Developer Senior' },
+                        { name: 'Sofia Chen', role: 'React Developer' },
+                        { name: 'Marco López', role: 'Vue Developer' },
+                        { name: 'Laura Pérez', role: 'Frontend Developer' }
                       ]},
-                    { name: 'Elena Torres', role: 'Manager Backend', team: 'Engineering', accent: '#2a5298',
+                    { name: 'Elena Torres', role: 'Engineering Manager Backend', team: 'Engineering', accent: '#2a5298',
                       children: [
-                        { name: 'Lucas Fuentes', role: 'Python Developer', team: 'Engineering', accent: '#2a5298' },
-                        { name: 'Valentina Gómez', role: 'DevOps Engineer', team: 'Engineering', accent: '#2a5298' }
+                        { name: 'Lucas Fuentes', role: 'Backend Developer Senior' },
+                        { name: 'Valentina Gómez', role: 'DevOps Engineer' },
+                        { name: 'Carlos Díaz', role: 'Backend Developer' },
+                        { name: 'Juliana Mora', role: 'Backend Developer' },
+                        { name: 'Andrés Rivas', role: 'Database Administrator' }
                       ]},
                     { name: 'Francisco Ruiz', role: 'Lead ML Engineer', team: 'Engineering', accent: '#2a5298',
                       children: [
-                        { name: 'Natalia Ramos', role: 'ML Specialist', team: 'Engineering', accent: '#2a5298' },
-                        { name: 'Andrés Peña', role: 'Data Scientist', team: 'Engineering', accent: '#2a5298' }
-                      ]}
-                  ]},
-                { name: 'Juan López', role: 'Director de Producto', team: 'Product', accent: '#8e44ad',
-                  children: [
-                    { name: 'Roberto Silva', role: 'Product Manager', team: 'Product', accent: '#8e44ad',
+                        { name: 'Natalia Ramos', role: 'ML Engineer Senior' },
+                        { name: 'Diego Santana', role: 'ML Engineer' },
+                        { name: 'Gabriela Santos', role: 'Data Scientist' },
+                        { name: 'Roberto Campos', role: 'Data Scientist' }
+                      ]},
+                    { name: 'Javier Medina', role: 'QA Manager', team: 'Engineering', accent: '#2a5298',
                       children: [
-                        { name: 'Isabel Vargas', role: 'UX Designer', team: 'Product', accent: '#8e44ad' },
-                        { name: 'Marco Díaz', role: 'Data Analyst', team: 'Product', accent: '#8e44ad' }
+                        { name: 'Isabel Castro', role: 'QA Engineer Senior' },
+                        { name: 'Camila Flores', role: 'QA Engineer' },
+                        { name: 'Raúl Mendez', role: 'QA Automation Engineer' },
+                        { name: 'Daniela Jiménez', role: 'QA Engineer' }
+                      ]},
+                    { name: 'Sergio Vargas', role: 'Technical Lead', team: 'Engineering', accent: '#2a5298',
+                      children: [
+                        { name: 'Alejandro Gómez', role: 'Senior Developer' },
+                        { name: 'Catalina López', role: 'Senior Developer' }
                       ]}
                   ]},
-                { name: 'Laura Martínez', role: 'Directora de Operaciones', team: 'Operations', accent: '#e67e22' },
-                { name: 'David Rodríguez', role: 'Director Comercial', team: 'Sales & Marketing', accent: '#27ae60' }
+                { name: 'Juan López', role: 'VP Producto', team: 'Product', accent: '#8e44ad',
+                  children: [
+                    { name: 'Roberto Silva', role: 'Senior Product Manager', team: 'Product', accent: '#8e44ad',
+                      children: [
+                        { name: 'Isabel Vargas', role: 'UX/UI Designer Senior' },
+                        { name: 'Marco Díaz', role: 'Product Analyst' },
+                        { name: 'Sandra González', role: 'Product Designer' }
+                      ]},
+                    { name: 'Beatriz Sánchez', role: 'Product Manager', team: 'Product', accent: '#8e44ad',
+                      children: [
+                        { name: 'Felipe Rosales', role: 'Product Designer' },
+                        { name: 'Mariana Ruiz', role: 'User Researcher' }
+                      ]},
+                    { name: 'Vicente Morales', role: 'Product Manager Growth', team: 'Product', accent: '#8e44ad',
+                      children: [
+                        { name: 'Ximena Vega', role: 'Growth Analyst' },
+                        { name: 'Emilio Soto', role: 'Product Analyst' }
+                      ]}
+                  ]},
+                { name: 'Laura Martínez', role: 'VP Operaciones', team: 'Operations', accent: '#e67e22',
+                  children: [
+                    { name: 'Cristina López', role: 'HR Manager', team: 'Operations', accent: '#e67e22',
+                      children: [
+                        { name: 'Rodrigo Núñez', role: 'HR Specialist' },
+                        { name: 'Valentina Araya', role: 'Recruiter' },
+                        { name: 'Pamela Hidalgo', role: 'HR Coordinator' }
+                      ]},
+                    { name: 'Hernán Flores', role: 'Finance Manager', team: 'Operations', accent: '#e67e22',
+                      children: [
+                        { name: 'Lorena Mendoza', role: 'Accountant Senior' },
+                        { name: 'Gustavo Ortiz', role: 'Financial Analyst' }
+                      ]},
+                    { name: 'Silvia Cardona', role: 'Operations Manager', team: 'Operations', accent: '#e67e22',
+                      children: [
+                        { name: 'Fabricio Patel', role: 'Operations Specialist' },
+                        { name: 'Constanza Riquelme', role: 'Office Manager' }
+                      ]}
+                  ]},
+                { name: 'David Rodríguez', role: 'VP Sales & Marketing', team: 'Sales & Marketing', accent: '#27ae60',
+                  children: [
+                    { name: 'Pilar Fuentes', role: 'Sales Director', team: 'Sales & Marketing', accent: '#27ae60',
+                      children: [
+                        { name: 'Tomás Herrera', role: 'Enterprise Account Executive' },
+                        { name: 'Carolina Bravo', role: 'Account Executive' },
+                        { name: 'Miguel Arraya', role: 'Sales Development Rep' },
+                        { name: 'Francisca Leiva', role: 'Sales Development Rep' }
+                      ]},
+                    { name: 'Andrés Castillo', role: 'Marketing Manager', team: 'Sales & Marketing', accent: '#27ae60',
+                      children: [
+                        { name: 'Valeria Zamora', role: 'Content Marketing Manager' },
+                        { name: 'Joaquín Poblete', role: 'Digital Marketing Specialist' },
+                        { name: 'Carla Quintanilla', role: 'Social Media Manager' },
+                        { name: 'Rodrigo Sepúlveda', role: 'Marketing Analyst' }
+                      ]},
+                    { name: 'Mauricio Sanhueza', role: 'Channel Partner Manager', team: 'Sales & Marketing', accent: '#27ae60',
+                      children: [
+                        { name: 'Gabriela Núñez', role: 'Partner Manager' },
+                        { name: 'Lisandro Fuentes', role: 'Channel Coordinator' }
+                      ]}
+                  ]}
             ]
-        };
+        }
 
         function countTotal(node) {
             if (!node.children) return 0;
@@ -1063,7 +1265,7 @@
 
         document.getElementById('orgTreeRoot').appendChild(buildNode(ORG_DATA));
 
-        // Alternar entre Vista Lista y Vista Organigrama
+        // Alternar entre vistas (Lista, Organigrama, Quiénes Somos)
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
@@ -1072,6 +1274,7 @@
                 const view = this.dataset.view;
                 document.getElementById('listView').style.display = view === 'list' ? '' : 'none';
                 document.getElementById('chartView').style.display = view === 'chart' ? '' : 'none';
+                document.getElementById('aboutView').style.display = view === 'about' ? '' : 'none';
                 document.querySelector('.filters').style.display = view === 'list' ? 'flex' : 'none';
             });
         });
