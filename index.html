@@ -636,6 +636,69 @@
                 font-size: 1.5rem;
             }
         }
+
+        .search-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            border: 2px solid #e5e9f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        .control-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+        }
+
+        .hidden-item {
+            display: none;
+        }
+
+        .dept-content.collapsed {
+            max-height: 0;
+            border: none;
+        }
+
+        .dept-content {
+            max-height: 10000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
     </style>
 </head>
 <body>
@@ -647,6 +710,13 @@
                 <button class="view-toggle-btn active" data-view="list">Vista Lista</button>
                 <button class="view-toggle-btn" data-view="chart">Vista Organigrama</button>
                 <button class="view-toggle-btn" data-view="about">¿Quiénes Somos?</button>
+            </div>
+            <div class="search-bar">
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre o departamento...">
+                <div class="control-btns">
+                    <button class="control-btn" id="expandAllBtn">Expandir Todo</button>
+                    <button class="control-btn" id="collapseAllBtn">Contraer Todo</button>
+                </div>
             </div>
             <div class="filters" style="display:flex;">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
@@ -916,7 +986,7 @@
 
         function buildTreeNode(node, depth = 0) {
             const li = document.createElement('li');
-            const accent = node.accent || '#2a5298';
+            const accent = node.displayAccent || node.accent || '#2a5298';
             const hasChildren = node.children && node.children.length > 0;
             const directChildren = node.children ? node.children.length : 0;
             const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
@@ -936,7 +1006,7 @@
             `;
 
             if (hasChildren) {
-                li.classList.add('has-children');
+                li.classList.add('has-children', 'node-collapsed');
                 const ul = document.createElement('ul');
                 node.children.forEach(child => ul.appendChild(buildTreeNode(child, depth + 1)));
                 li.appendChild(ul);
@@ -1014,6 +1084,26 @@
         document.getElementById('orgTreeRoot').appendChild(buildTreeNode(ORG_DATA));
         buildListView();
 
+
+        // Propagar colores de Chiefs a subordinados
+        function inheritAccents(node, chiefAccent = null) {
+            const accent = node.accent || chiefAccent;
+            node.displayAccent = accent;
+            if (node.children) {
+                node.children.forEach(child => inheritAccents(child, accent));
+            }
+        }
+
+        // Heredar colores desde cada Chief
+        if (ORG_DATA.children) {
+            ORG_DATA.children.forEach(child => {
+                if (child.role && child.role.includes('Chief')) {
+                    inheritAccents(child, child.accent);
+                }
+            });
+        }
+        inheritAccents(ORG_DATA);
+
         // Controles de vista
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -1047,3 +1137,52 @@
     </script>
 </body>
 </html>
+        // Búsqueda y Filtrado
+        const searchInput = document.getElementById('searchInput');
+        const expandAllBtn = document.getElementById('expandAllBtn');
+        const collapseAllBtn = document.getElementById('collapseAllBtn');
+
+        function performSearch(query) {
+            const lowerQuery = query.toLowerCase();
+            const items = document.querySelectorAll('.org-position, [data-department-name]');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(lowerQuery) || query === '') {
+                    item.classList.remove('hidden-item');
+                } else {
+                    item.classList.add('hidden-item');
+                }
+            });
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.node-collapsed').forEach(el => {
+                el.classList.remove('node-collapsed');
+            });
+            document.querySelectorAll('.dept-content.collapsed').forEach(el => {
+                el.classList.remove('collapsed');
+            });
+            document.querySelectorAll('.position-details').forEach(el => {
+                el.classList.add('expanded');
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.has-children:not(.node-collapsed)').forEach(el => {
+                el.classList.add('node-collapsed');
+            });
+            document.querySelectorAll('.dept-content:not(.collapsed)').forEach(el => {
+                el.classList.add('collapsed');
+            });
+            document.querySelectorAll('.position-details.expanded').forEach(el => {
+                el.classList.remove('expanded');
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => performSearch(e.target.value));
+        }
+        if (expandAllBtn) expandAllBtn.addEventListener('click', expandAll);
+        if (collapseAllBtn) collapseAllBtn.addEventListener('click', collapseAll);
+
