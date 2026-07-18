@@ -648,434 +648,72 @@
                 <button class="view-toggle-btn" data-view="chart">Vista Organigrama</button>
                 <button class="view-toggle-btn" data-view="about">¿Quiénes Somos?</button>
             </div>
-            <div class="filters">
+            <div class="filters" style="display:flex;">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
-                <button class="filter-btn" data-filter="engineering">🔧 Engineering</button>
-                <button class="filter-btn" data-filter="product">📊 Product</button>
-                <button class="filter-btn" data-filter="operations">⚙️ Operations</button>
-                <button class="filter-btn" data-filter="sales">📈 Sales & Marketing</button>
             </div>
         </div>
     </header>
 
     <main>
         <div class="container">
+            <!-- Vista Lista -->
             <div id="listView">
-            <!-- Estadísticas arriba -->
-            <div class="stats-container" style="margin-bottom: 40px;">
-                <div class="stat-card">
-                    <div class="stat-number">105</div>
-                    <div class="stat-label">Empleados Totales</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">5</div>
-                    <div class="stat-label">Departamentos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">1</div>
-                    <div class="stat-label">Junta Ejecutiva</div>
-                </div>
-            </div>
-            <div class="org-structure" id="orgStructure">
-                <!-- Engineering -->
-                <div class="department-section" data-department="engineering">
-                    <div class="dept-header" onclick="toggleDepartment(this)">
-                        <div class="dept-title">
-                            <span class="dept-icon">🔧</span>
-                            <span>Engineering</span>
-                        </div>
-                        <span class="toggle-icon">▼</span>
+                <div class="stats-container" style="margin-bottom: 40px;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-employees">112</div>
+                        <div class="stat-label">Empleados Totales</div>
                     </div>
-                    <div class="dept-content">
-                        <div class="hierarchy">
-                            <!-- Director -->
-                            <div class="org-position">
-                                <div class="position-header" onclick="togglePosition(this)">
-                                    <div class="position-info">
-                                        <div class="person-name">María García</div>
-                                        <div class="person-role">Directora Técnica | Reporta a: CEO</div>
-                                    </div>
-                                    <span class="position-expand">▼</span>
-                                </div>
-                                <div class="position-details">
-                                    <div class="detail-content">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Email</span>
-                                            <span class="detail-value"><a href="mailto:maria.garcia@organIA.com">maria.garcia@organIA.com</a></span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Teléfono</span>
-                                            <span class="detail-value">+34 91 234 5678</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Área</span>
-                                            <span class="detail-value">Engineering</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Experiencia</span>
-                                            <span class="detail-value">12 años en tech</span>
-                                        </div>
-                                        <div style="grid-column: 1 / -1;">
-                                            <span class="detail-label">Responsabilidades</span>
-                                            <span class="detail-value">Liderar estrategia técnica, gestión de infraestructura, supervisar 8 ingenieros</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Managers -->
-                            <div class="team-header">Managers a cargo</div>
-                            <div class="team-list">
-                                <div class="org-position">
-                                    <div class="position-header" onclick="togglePosition(this)">
-                                        <div class="position-info">
-                                            <div class="person-name">Ana Sánchez</div>
-                                            <div class="person-role">Manager Frontend</div>
-                                        </div>
-                                        <span class="position-expand">▼</span>
-                                    </div>
-                                    <div class="position-details">
-                                        <div class="detail-content">
-                                            <div class="detail-item">
-                                                <span class="detail-label">Email</span>
-                                                <span class="detail-value"><a href="mailto:ana.sanchez@organIA.com">ana.sanchez@organIA.com</a></span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <span class="detail-label">Teléfono</span>
-                                                <span class="detail-value">+34 91 345 6789</span>
-                                            </div>
-                                            <div style="grid-column: 1 / -1;">
-                                                <div class="team-members">
-                                                    <span class="team-label">Equipo:</span>
-                                                    <span class="member-tag">Pedro Ruiz - React</span>
-                                                    <span class="member-tag">Sofia Chen - Vue</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="org-position">
-                                    <div class="position-header" onclick="togglePosition(this)">
-                                        <div class="position-info">
-                                            <div class="person-name">Elena Torres</div>
-                                            <div class="person-role">Manager Backend</div>
-                                        </div>
-                                        <span class="position-expand">▼</span>
-                                    </div>
-                                    <div class="position-details">
-                                        <div class="detail-content">
-                                            <div class="detail-item">
-                                                <span class="detail-label">Email</span>
-                                                <span class="detail-value"><a href="mailto:elena.torres@organIA.com">elena.torres@organIA.com</a></span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <span class="detail-label">Teléfono</span>
-                                                <span class="detail-value">+34 91 456 7890</span>
-                                            </div>
-                                            <div style="grid-column: 1 / -1;">
-                                                <div class="team-members">
-                                                    <span class="team-label">Equipo:</span>
-                                                    <span class="member-tag">Lucas Fuentes - Python</span>
-                                                    <span class="member-tag">Valentina Gómez - DevOps</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="org-position">
-                                    <div class="position-header" onclick="togglePosition(this)">
-                                        <div class="position-info">
-                                            <div class="person-name">Francisco Ruiz</div>
-                                            <div class="person-role">Lead ML Engineer</div>
-                                        </div>
-                                        <span class="position-expand">▼</span>
-                                    </div>
-                                    <div class="position-details">
-                                        <div class="detail-content">
-                                            <div class="detail-item">
-                                                <span class="detail-label">Email</span>
-                                                <span class="detail-value"><a href="mailto:francisco.ruiz@organIA.com">francisco.ruiz@organIA.com</a></span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <span class="detail-label">Teléfono</span>
-                                                <span class="detail-value">+34 91 567 8901</span>
-                                            </div>
-                                            <div style="grid-column: 1 / -1;">
-                                                <div class="team-members">
-                                                    <span class="team-label">Equipo:</span>
-                                                    <span class="member-tag">Natalia Ramos - ML Specialist</span>
-                                                    <span class="member-tag">Andrés Peña - Data Scientist</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-departments">9</div>
+                        <div class="stat-label">Departamentos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-chiefs">9</div>
+                        <div class="stat-label">Chiefs</div>
                     </div>
                 </div>
-
-                <!-- Product -->
-                <div class="department-section" data-department="product">
-                    <div class="dept-header" onclick="toggleDepartment(this)">
-                        <div class="dept-title">
-                            <span class="dept-icon">📊</span>
-                            <span>Product</span>
-                        </div>
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="dept-content">
-                        <div class="hierarchy">
-                            <div class="org-position">
-                                <div class="position-header" onclick="togglePosition(this)">
-                                    <div class="position-info">
-                                        <div class="person-name">Juan López</div>
-                                        <div class="person-role">Director de Producto | Reporta a: CEO</div>
-                                    </div>
-                                    <span class="position-expand">▼</span>
-                                </div>
-                                <div class="position-details">
-                                    <div class="detail-content">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Email</span>
-                                            <span class="detail-value"><a href="mailto:juan.lopez@organIA.com">juan.lopez@organIA.com</a></span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Teléfono</span>
-                                            <span class="detail-value">+34 91 678 9012</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Área</span>
-                                            <span class="detail-value">Product</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Experiencia</span>
-                                            <span class="detail-value">8 años en producto</span>
-                                        </div>
-                                        <div style="grid-column: 1 / -1;">
-                                            <span class="detail-label">Responsabilidades</span>
-                                            <span class="detail-value">Roadmap de producto, estrategia UX/UI, métricas de negocio</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="team-header">Managers a cargo</div>
-                            <div class="team-list">
-                                <div class="org-position">
-                                    <div class="position-header" onclick="togglePosition(this)">
-                                        <div class="position-info">
-                                            <div class="person-name">Roberto Silva</div>
-                                            <div class="person-role">Product Manager</div>
-                                        </div>
-                                        <span class="position-expand">▼</span>
-                                    </div>
-                                    <div class="position-details">
-                                        <div class="detail-content">
-                                            <div class="detail-item">
-                                                <span class="detail-label">Email</span>
-                                                <span class="detail-value"><a href="mailto:roberto.silva@organIA.com">roberto.silva@organIA.com</a></span>
-                                            </div>
-                                            <div class="detail-item">
-                                                <span class="detail-label">Teléfono</span>
-                                                <span class="detail-value">+34 91 789 0123</span>
-                                            </div>
-                                            <div style="grid-column: 1 / -1;">
-                                                <div class="team-members">
-                                                    <span class="team-label">Equipo:</span>
-                                                    <span class="member-tag">Isabel Vargas - UX Designer</span>
-                                                    <span class="member-tag">Marco Díaz - Data Analyst</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Operations -->
-                <div class="department-section" data-department="operations">
-                    <div class="dept-header" onclick="toggleDepartment(this)">
-                        <div class="dept-title">
-                            <span class="dept-icon">⚙️</span>
-                            <span>Operations</span>
-                        </div>
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="dept-content">
-                        <div class="hierarchy">
-                            <div class="org-position">
-                                <div class="position-header" onclick="togglePosition(this)">
-                                    <div class="position-info">
-                                        <div class="person-name">Laura Martínez</div>
-                                        <div class="person-role">Directora de Operaciones | Reporta a: CEO</div>
-                                    </div>
-                                    <span class="position-expand">▼</span>
-                                </div>
-                                <div class="position-details">
-                                    <div class="detail-content">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Email</span>
-                                            <span class="detail-value"><a href="mailto:laura.martinez@organIA.com">laura.martinez@organIA.com</a></span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Teléfono</span>
-                                            <span class="detail-value">+34 91 890 1234</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Área</span>
-                                            <span class="detail-value">Operations</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Experiencia</span>
-                                            <span class="detail-value">10 años en operaciones</span>
-                                        </div>
-                                        <div style="grid-column: 1 / -1;">
-                                            <span class="detail-label">Responsabilidades</span>
-                                            <span class="detail-value">Procesos operativos, RRHH, finanzas, cumplimiento regulatorio</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sales & Marketing -->
-                <div class="department-section" data-department="sales">
-                    <div class="dept-header" onclick="toggleDepartment(this)">
-                        <div class="dept-title">
-                            <span class="dept-icon">📈</span>
-                            <span>Sales & Marketing</span>
-                        </div>
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="dept-content">
-                        <div class="hierarchy">
-                            <div class="org-position">
-                                <div class="position-header" onclick="togglePosition(this)">
-                                    <div class="position-info">
-                                        <div class="person-name">David Rodríguez</div>
-                                        <div class="person-role">Director Comercial | Reporta a: CEO</div>
-                                    </div>
-                                    <span class="position-expand">▼</span>
-                                </div>
-                                <div class="position-details">
-                                    <div class="detail-content">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Email</span>
-                                            <span class="detail-value"><a href="mailto:david.rodriguez@organIA.com">david.rodriguez@organIA.com</a></span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Teléfono</span>
-                                            <span class="detail-value">+34 91 901 2345</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Área</span>
-                                            <span class="detail-value">Sales & Marketing</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Experiencia</span>
-                                            <span class="detail-value">9 años en comercial</span>
-                                        </div>
-                                        <div style="grid-column: 1 / -1;">
-                                            <span class="detail-label">Responsabilidades</span>
-                                            <span class="detail-value">Estrategia comercial, marketing digital, relaciones con clientes</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <div class="org-structure" id="orgStructure"></div>
             </div>
 
-            <!-- Vista de Organigrama (árbol) -->
+            <!-- Vista Organigrama -->
             <div id="chartView" style="display:none">
-            <!-- Estadísticas arriba -->
-            <div class="stats-container" style="margin-bottom: 40px;">
-                <div class="stat-card">
-                    <div class="stat-number">105</div>
-                    <div class="stat-label">Empleados Totales</div>
+                <div class="stats-container" style="margin-bottom: 40px;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-employees-2">112</div>
+                        <div class="stat-label">Empleados Totales</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-departments-2">9</div>
+                        <div class="stat-label">Departamentos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-chiefs-2">9</div>
+                        <div class="stat-label">Chiefs</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number">5</div>
-                    <div class="stat-label">Departamentos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">1</div>
-                    <div class="stat-label">Junta Ejecutiva</div>
-                </div>
-            </div>
                 <div class="chart-view-wrapper">
                     <ul class="org-tree" id="orgTreeRoot"></ul>
                 </div>
             </div>
 
-            <!-- Vista: ¿Quiénes Somos? -->
+            <!-- Vista Acerca De -->
             <div id="aboutView" style="display:none">
                 <div class="about-section">
                     <h2>Sobre OrganIA</h2>
-                    <p>OrganIA es una empresa líder en tecnología e inteligencia artificial, dedicada a transformar ideas en soluciones innovadoras que impactan positivamente en el mundo. Con más de 100 profesionales talentosos en nuestro equipo, nos enfocamos en crear productos de alta calidad que resuelven problemas complejos.</p>
+                    <p>OrganIA es una empresa líder en tecnología e inteligencia artificial, dedicada a transformar ideas en soluciones innovadoras que impactan positivamente en el mundo. Con más de 112 profesionales talentosos en nuestro equipo, nos enfocamos en crear productos de alta calidad que resuelven problemas complejos.</p>
                     <p>Fundada en 2024, nuestra misión es democratizar el acceso a tecnologías avanzadas de IA y proporcionar herramientas que permitan a las organizaciones operar más eficientemente y tomar decisiones basadas en datos.</p>
                 </div>
-
                 <div class="about-section">
                     <h2>Nuestra Misión</h2>
-                    <p>Transformar la forma en que las organizaciones utilizan la inteligencia artificial para resolver problemas, mejorar procesos y crear valor. Creemos que la tecnología debe ser accesible, intuitiva y centrada en el usuario.</p>
+                    <p>Transformar la forma en que las organizaciones utilizan la inteligencia artificial para resolver problemas, mejorar procesos y crear valor.</p>
                 </div>
-
                 <div class="about-section">
                     <h2>Nuestros Valores</h2>
                     <div class="values-grid">
-                        <div class="value-card">
-                            <h3>Innovación</h3>
-                            <p>Continuamente buscamos nuevas formas de resolver problemas y mejorar nuestras soluciones.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Excelencia</h3>
-                            <p>Nos comprometemos con la calidad en todo lo que hacemos, desde el código hasta el servicio al cliente.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Colaboración</h3>
-                            <p>Creemos en el poder del trabajo en equipo y en la diversidad de perspectivas.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Integridad</h3>
-                            <p>Actuamos con honestidad y transparencia en todas nuestras interacciones y decisiones.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="about-section">
-                    <h2>Nuestro Equipo</h2>
-                    <p>Con más de 100 talentosos profesionales distribuidos en 5 departamentos principales, OrganIA cuenta con expertos en ingeniería, producto, operaciones, ventas y marketing. Nuestro equipo está comprometido con la excelencia y la innovación continua.</p>
-                </div>
-
-                <div class="about-section">
-                    <h2>Áreas Clave</h2>
-                    <div class="values-grid">
-                        <div class="value-card">
-                            <h3>Engineering</h3>
-                            <p>40+ ingenieros trabajando en frontend, backend, DevOps, QA y machine learning.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Producto</h3>
-                            <p>20+ profesionales enfocados en diseño, análisis y gestión de producto.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Ventas & Marketing</h3>
-                            <p>20+ especialistas en estrategia comercial y marketing digital.</p>
-                        </div>
-                        <div class="value-card">
-                            <h3>Operaciones</h3>
-                            <p>20+ profesionales en RRHH, finanzas y operaciones empresariales.</p>
-                        </div>
+                        <div class="value-card"><h3>Innovación</h3><p>Continuamente buscamos nuevas formas de resolver problemas.</p></div>
+                        <div class="value-card"><h3>Excelencia</h3><p>Nos comprometemos con la calidad en todo lo que hacemos.</p></div>
+                        <div class="value-card"><h3>Colaboración</h3><p>Creemos en el poder del trabajo en equipo.</p></div>
+                        <div class="value-card"><h3>Integridad</h3><p>Actuamos con honestidad y transparencia.</p></div>
                     </div>
                 </div>
             </div>
@@ -1083,23 +721,7 @@
     </main>
 
     <script>
-        function togglePosition(header) {
-            const details = header.nextElementSibling;
-            const icon = header.querySelector('.position-expand');
-
-            details.classList.toggle('expanded');
-            icon.classList.toggle('expanded');
-        }
-
-        function toggleDepartment(header) {
-            const content = header.nextElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-
-            content.classList.toggle('collapsed');
-            icon.classList.toggle('collapsed');
-        }
-
-        // ---- Datos y construcción del organigrama (Vista Árbol) ----
+        // ORG_DATA - Estructura Organizacional
         const ORG_DATA = {
             name: 'Carlos Mendoza', role: 'Chief Executive Officer', team: 'Dirección General', accent: '#1e3c72',
             children: [
@@ -1263,127 +885,76 @@
                   children: [
                     { name: 'Guillermo Saldes', role: 'Head of ESG Initiatives', team: 'Sustentabilidad', accent: '#27ae60',
                       children: [
-                        { name: 'Natalia Parra', role: 'ESG Manager' },
-                        { name: 'Javier Soto', role: 'Sustainability Analyst' }
-                      ]},
-                    { name: 'Rosario López', role: 'Head of Environmental Affairs', team: 'Sustentabilidad', accent: '#27ae60',
-                      children: [
-                        { name: 'Marcelo Aguirre', role: 'Environmental Coordinator' },
-                        { name: 'Laura Vásquez', role: 'Environmental Specialist' }
-                      ]}
-                  ]}
-            ]
-        }
-                card.addEventListener('click', () => {
-                    li.classList.toggle('node-collapsed');
-                    refresh();
-                });
-                refresh();
-            }
-            return li;
-        }
+                        { name: 'Natalia Parra', role: 'ESG Manager' }
 
-        document.getElementById('orgTreeRoot').appendChild(buildNode(ORG_DATA));
-
-        // Alternar entre vistas (Lista, Organigrama, Quiénes Somos)
-
-        // Procesar ORG_DATA y generar estadísticas
+        // Funciones auxiliares
         function countEmployees(node) {
             let count = 1;
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(child => {
-                    count += countEmployees(child);
-                });
+            if (node.children) {
+                node.children.forEach(child => count += countEmployees(child));
             }
             return count;
         }
 
         function getDepartments(node, depts = new Set()) {
             if (node.team) depts.add(node.team);
-            if (node.children && node.children.length > 0) {
+            if (node.children) {
                 node.children.forEach(child => getDepartments(child, depts));
             }
             return depts;
         }
 
-        function buildNode(node, depth = 0) {
+        function buildTreeNode(node, depth = 0) {
             const li = document.createElement('li');
             const accent = node.accent || '#2a5298';
             const hasChildren = node.children && node.children.length > 0;
+            const directChildren = node.children ? node.children.length : 0;
             const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
-            const directChildren = hasChildren ? node.children.length : 0;
 
-            const expandClass = hasChildren ? 'expandable' : '';
-            const html = `
-                <div class="org-card" data-accent="${accent}">
-                    <div class="org-card-header">
-                        <div class="org-card-title">
-                            <span class="org-card-name">${node.name}</span>
-                            <span class="org-card-role">${node.role}</span>
-                        </div>
-                        ${hasChildren ? `<div class="org-badge">👥 ${directChildren} directo(s), ${totalChildren} total</div>` : ''}
-                    </div>
+            const badge = hasChildren ? `<div class="org-count-badge">👥 ${directChildren} directo(s)<br/>${totalChildren} total</div>` : '';
+
+            li.innerHTML = `
+                <div class="org-card" style="--accent: ${accent}">
+                    <div class="org-card-bar"></div>
                     <div class="org-card-body">
-                        ${node.team ? `<div class="org-team">${node.team}</div>` : ''}
+                        <div class="org-card-name">${node.name}</div>
+                        <div class="org-tag-value">${node.role}</div>
+                        ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
+                        ${badge}
                     </div>
                 </div>
             `;
-            li.innerHTML = html;
-            li.querySelector('.org-card').style.borderLeftColor = accent;
 
             if (hasChildren) {
-                li.classList.add(expandClass);
+                li.classList.add('has-children');
                 const ul = document.createElement('ul');
-                node.children.forEach(child => ul.appendChild(buildNode(child, depth + 1)));
+                node.children.forEach(child => ul.appendChild(buildTreeNode(child, depth + 1)));
                 li.appendChild(ul);
 
-                const card = li.querySelector('.org-card');
-                card.addEventListener('click', function(e) {
+                li.querySelector('.org-card').addEventListener('click', function(e) {
                     e.stopPropagation();
-                    const ul = card.parentElement.querySelector('ul');
-                    if (ul) {
-                        ul.style.display = ul.style.display === 'none' ? 'block' : 'none';
-                    }
+                    li.classList.toggle('node-collapsed');
                 });
             }
 
             return li;
         }
 
-        const totalEmployees = countEmployees(ORG_DATA);
-        const departments = getDepartments(ORG_DATA);
-        const chiefs = (ORG_DATA.children || []).filter(c => c.role && c.role.includes('Chief')).length;
-
-        // Actualizar estadísticas en ambas vistas
-        document.querySelectorAll('.stats-container').forEach(container => {
-            const cards = container.querySelectorAll('.stat-card');
-            if (cards[0]) cards[0].querySelector('.stat-number').textContent = totalEmployees;
-            if (cards[1]) cards[1].querySelector('.stat-number').textContent = departments.size;
-            if (cards[2]) cards[2].querySelector('.stat-number').textContent = chiefs;
-        });
-
-        // Renderizar árbol organizacional
-        document.getElementById('orgTreeRoot').appendChild(buildNode(ORG_DATA));
-
-        // Generar vista de lista dinámicamente
         function buildListView() {
             const container = document.getElementById('orgStructure');
             container.innerHTML = '';
+            const sections = {};
 
-            function addNodeToList(node, parentDept = null) {
+            function addToList(node, parentDept = null) {
                 const dept = node.team || parentDept;
                 if (!dept) return;
 
-                let section = document.querySelector(`[data-department-name="${dept}"]`);
-                if (!section) {
-                    section = document.createElement('div');
+                if (!sections[dept]) {
+                    const section = document.createElement('div');
                     section.className = 'department-section';
-                    section.setAttribute('data-department-name', dept);
                     section.innerHTML = `
-                        <div class="dept-header" onclick="toggleDepartment(this)">
-                            <div class="dept-title">
-                                <span>${dept}</span>
-                            </div>
+                        <div class="dept-header" onclick="toggleDept(this)">
+                            <div class="dept-title"><span>${dept}</span></div>
                             <span class="toggle-icon">▼</span>
                         </div>
                         <div class="dept-content">
@@ -1391,63 +962,78 @@
                         </div>
                     `;
                     container.appendChild(section);
+                    sections[dept] = section.querySelector('.hierarchy');
                 }
 
-                const hierarchy = section.querySelector('.hierarchy');
-                const posDiv = document.createElement('div');
-                posDiv.className = 'org-position';
-                posDiv.innerHTML = `
-                    <div class="position-header" onclick="togglePosition(this)">
+                const pos = document.createElement('div');
+                pos.className = 'org-position';
+                const hasChildren = node.children && node.children.length > 0;
+                pos.innerHTML = `
+                    <div class="position-header" onclick="togglePos(this)">
                         <div class="position-info">
                             <div class="person-name">${node.name}</div>
                             <div class="person-role">${node.role}</div>
                         </div>
-                        <span class="position-expand">▼</span>
+                        ${hasChildren ? '<span class="position-expand">▼</span>' : ''}
                     </div>
-                    <div class="position-details">
-                        <div class="detail-content">
-                            <div class="detail-item">
-                                <span class="detail-label">Rol</span>
-                                <span class="detail-value">${node.role}</span>
-                            </div>
-                            ${node.team ? `<div class="detail-item">
-                                <span class="detail-label">Departamento</span>
-                                <span class="detail-value">${node.team}</span>
-                            </div>` : ''}
-                        </div>
-                    </div>
+                    ${hasChildren ? `<div class="position-details"><div class="detail-content"><div class="detail-item"><span class="detail-label">Rol</span><span class="detail-value">${node.role}</span></div>${node.team ? `<div class="detail-item"><span class="detail-label">Departamento</span><span class="detail-value">${node.team}</span></div>` : ''}</div></div>` : ''}
                 `;
-                hierarchy.appendChild(posDiv);
+                sections[dept].appendChild(pos);
 
-                if (node.children && node.children.length > 0) {
-                    node.children.forEach(child => addNodeToList(child, dept));
+                if (node.children) {
+                    node.children.forEach(child => addToList(child, dept));
                 }
             }
 
-            addNodeToList(ORG_DATA);
+            addToList(ORG_DATA);
         }
 
+        // Actualizar estadísticas
+        const totalEmp = countEmployees(ORG_DATA);
+        const depts = getDepartments(ORG_DATA);
+        const chiefCount = (ORG_DATA.children || []).filter(c => c.role && c.role.includes('Chief')).length;
+
+        document.getElementById('stat-employees').textContent = totalEmp;
+        document.getElementById('stat-employees-2').textContent = totalEmp;
+        document.getElementById('stat-departments').textContent = depts.size;
+        document.getElementById('stat-departments-2').textContent = depts.size;
+        document.getElementById('stat-chiefs').textContent = chiefCount;
+        document.getElementById('stat-chiefs-2').textContent = chiefCount;
+
+        // Renderizar vistas
+        document.getElementById('orgTreeRoot').appendChild(buildTreeNode(ORG_DATA));
         buildListView();
 
-
-        // Filtros
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        // Controles de vista
+        document.querySelectorAll('.view-toggle-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-
-                const filter = this.dataset.filter;
-                const sections = document.querySelectorAll('.department-section');
-
-                sections.forEach(section => {
-                    if (filter === 'all') {
-                        section.style.display = 'block';
-                    } else {
-                        section.style.display = section.dataset.department === filter ? 'block' : 'none';
-                    }
-                });
+                const view = this.dataset.view;
+                document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
+                document.getElementById('chartView').style.display = view === 'chart' ? 'block' : 'none';
+                document.getElementById('aboutView').style.display = view === 'about' ? 'block' : 'none';
             });
         });
+
+        // Togles
+        function togglePos(el) {
+            const details = el.nextElementSibling;
+            if (details) {
+                details.classList.toggle('expanded');
+                const icon = el.querySelector('.position-expand');
+                if (icon) icon.classList.toggle('expanded');
+            }
+        }
+
+        function toggleDept(el) {
+            const content = el.nextElementSibling;
+            content.classList.toggle('collapsed');
+            el.querySelector('.toggle-icon').classList.toggle('collapsed');
+        }
+
+        window.togglePos = togglePos;
+        window.toggleDept = toggleDept;
     </script>
 </body>
 </html>
