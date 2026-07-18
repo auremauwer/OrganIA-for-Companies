@@ -463,19 +463,40 @@
         }
 
         .org-count-badge {
-            position: absolute;
-            top: -10px;
-            right: -8px;
+            display: inline-block;
             background: var(--accent);
             color: white;
-            border: 2px solid white;
-            border-radius: 14px;
+            border-radius: 12px;
             font-size: 0.68rem;
             font-weight: 700;
             padding: 3px 9px;
             white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            z-index: 2;
+            margin-top: 8px;
+        }
+
+        /* Asistente: staff del CEO, visualmente distinto a los Chiefs */
+        li.assistant-branch > .org-card {
+            width: 165px;
+            border: 2px dashed var(--accent);
+            background: #f8f9fb;
+            margin-top: 30px;
+        }
+
+        li.assistant-branch > .org-card .org-card-bar {
+            display: none;
+        }
+
+        .org-staff-label {
+            display: inline-block;
+            background: #eef1f7;
+            color: #64748b;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 6px;
         }
 
         .org-toggle-hint {
@@ -1038,12 +1059,18 @@
             const directChildren = node.children ? node.children.length : 0;
             const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
 
-            const badge = hasChildren ? `<div class="org-count-badge">👥 ${directChildren} directo(s)<br/>${totalChildren} total</div>` : '';
+            const badge = hasChildren ? `<div class="org-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : '';
+            const isAssistant = node.role && node.role.toLowerCase().includes('asistente');
+
+            if (isAssistant) {
+                li.classList.add('assistant-branch');
+            }
 
             li.innerHTML = `
                 <div class="org-card" style="--accent: ${accent}">
                     <div class="org-card-bar"></div>
                     <div class="org-card-body">
+                        ${isAssistant ? '<div class="org-staff-label">Staff</div>' : ''}
                         <div class="org-card-name">${node.name}</div>
                         <div class="org-tag-value">${node.role}</div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
