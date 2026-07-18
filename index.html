@@ -607,6 +607,48 @@
             margin: 0;
         }
 
+        .search-control {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            border: 2px solid #e5e9f0;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        .control-btn {
+            background: #2a5298;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #1e3c72;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8rem;
@@ -671,6 +713,11 @@
                         <div class="stat-number" id="stat-chiefs">9</div>
                         <div class="stat-label">Chiefs</div>
                     </div>
+                </div>
+                <div class="search-control">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre o departamento...">
+                    <button class="control-btn" id="expandAllBtn">Expandir Todo</button>
+                    <button class="control-btn" id="collapseAllBtn">Contraer Todo</button>
                 </div>
                 <div class="org-structure" id="orgStructure"></div>
             </div>
@@ -1044,6 +1091,58 @@
 
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
+
+        // Búsqueda y Filtrado
+        const searchInput = document.getElementById('searchInput');
+        const expandAllBtn = document.getElementById('expandAllBtn');
+        const collapseAllBtn = document.getElementById('collapseAllBtn');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const positions = document.querySelectorAll('.org-position');
+                positions.forEach(pos => {
+                    const text = pos.textContent.toLowerCase();
+                    pos.style.display = text.includes(query) || query === '' ? 'block' : 'none';
+                });
+            });
+        }
+
+        if (expandAllBtn) {
+            expandAllBtn.addEventListener('click', () => {
+                document.querySelectorAll('.dept-content.collapsed').forEach(el => {
+                    el.classList.remove('collapsed');
+                    el.previousElementSibling.querySelector('.toggle-icon').classList.remove('collapsed');
+                });
+                document.querySelectorAll('.position-details').forEach(el => {
+                    el.classList.add('expanded');
+                    el.previousElementSibling.querySelector('.position-expand').classList.add('expanded');
+                });
+            });
+        }
+
+        if (collapseAllBtn) {
+            collapseAllBtn.addEventListener('click', () => {
+                document.querySelectorAll('.dept-content:not(.collapsed)').forEach(el => {
+                    el.classList.add('collapsed');
+                    el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
+                });
+                document.querySelectorAll('.position-details.expanded').forEach(el => {
+                    el.classList.remove('expanded');
+                    if (el.previousElementSibling && el.previousElementSibling.querySelector('.position-expand')) {
+                        el.previousElementSibling.querySelector('.position-expand').classList.remove('expanded');
+                    }
+                });
+            });
+        }
+
+        // Por defecto, contraer todos los departamentos
+        document.querySelectorAll('.dept-content').forEach(el => {
+            el.classList.add('collapsed');
+            if (el.previousElementSibling) {
+                el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
+            }
+        });
     </script>
 </body>
 </html>
