@@ -667,48 +667,6 @@
             margin: 0;
         }
 
-        .search-control {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .search-input {
-            flex: 1;
-            min-width: 250px;
-            padding: 10px 15px;
-            border: 2px solid #e5e9f0;
-            border-radius: 6px;
-            font-size: 0.95rem;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #2a5298;
-            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
-        }
-
-        .control-btn {
-            background: #2a5298;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .control-btn:hover {
-            background: #1e3c72;
-        }
-
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8rem;
@@ -791,6 +749,23 @@
             display: none;
         }
 
+        /* Resaltado temporal al saltar a un resultado de búsqueda */
+        .search-hit-flash {
+            animation: search-hit-pulse 2.2s ease-out;
+            position: relative;
+            z-index: 5;
+            border-radius: 8px;
+        }
+
+        @keyframes search-hit-pulse {
+            0%, 55% {
+                box-shadow: 0 0 0 3px #e74c3c;
+            }
+            100% {
+                box-shadow: 0 0 0 3px rgba(231, 76, 60, 0);
+            }
+        }
+
         .dept-content.collapsed {
             max-height: 0;
             border: none;
@@ -843,11 +818,6 @@
                         <div class="stat-number" id="stat-chiefs">9</div>
                         <div class="stat-label">Chiefs</div>
                     </div>
-                </div>
-                <div class="search-control">
-                    <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre o departamento...">
-                    <button class="control-btn" id="expandAllBtn">Expandir Todo</button>
-                    <button class="control-btn" id="collapseAllBtn">Contraer Todo</button>
                 </div>
                 <div class="org-structure" id="orgStructure"></div>
             </div>
@@ -1220,6 +1190,12 @@
                 document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
                 document.getElementById('chartView').style.display = view === 'chart' ? 'block' : 'none';
                 document.getElementById('aboutView').style.display = view === 'about' ? 'block' : 'none';
+
+                // Si hay una búsqueda activa, re-aplicarla para resaltar en la vista recién mostrada
+                const searchBox = document.getElementById('searchInput');
+                if (searchBox && searchBox.value.trim() !== '') {
+                    searchBox.dispatchEvent(new Event('input'));
+                }
             });
         });
 
@@ -1247,14 +1223,90 @@
         const expandAllBtn = document.getElementById('expandAllBtn');
         const collapseAllBtn = document.getElementById('collapseAllBtn');
 
+        function clearSearchHighlight() {
+            document.querySelectorAll('.search-hit-flash').forEach(el => el.classList.remove('search-hit-flash'));
+        }
+
+        function revealListRow(pos) {
+            const section = pos.closest('.department-section');
+            if (!section) return;
+            const content = section.querySelector('.dept-content');
+            const icon = section.querySelector('.toggle-icon');
+            if (content && content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                if (icon) icon.classList.remove('collapsed');
+            }
+        }
+
+        function revealTreeNode(li) {
+            let ancestorUl = li.parentElement;
+            while (ancestorUl) {
+                const ancestorLi = ancestorUl.closest('li.has-children');
+                if (!ancestorLi) break;
+                ancestorLi.classList.remove('node-collapsed');
+                ancestorUl = ancestorLi.parentElement;
+            }
+        }
+
+        function flashHighlight(el) {
+            el.classList.add('search-hit-flash');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => el.classList.remove('search-hit-flash'), 2200);
+        }
+
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
+                const query = e.target.value.trim().toLowerCase();
+                clearSearchHighlight();
+
+                // Vista Lista: filtrar, expandir el departamento del match y ubicarlo
                 const positions = document.querySelectorAll('.org-position');
+                let listNameMatch = null;
+                let listAnyMatch = null;
                 positions.forEach(pos => {
                     const text = pos.textContent.toLowerCase();
-                    pos.style.display = text.includes(query) || query === '' ? 'block' : 'none';
+                    const isMatch = query === '' || text.includes(query);
+                    pos.style.display = isMatch ? 'block' : 'none';
+                    if (query !== '' && isMatch) {
+                        revealListRow(pos);
+                        if (!listAnyMatch) listAnyMatch = pos;
+                        const nameEl = pos.querySelector('.person-name');
+                        if (!listNameMatch && nameEl && nameEl.textContent.toLowerCase().includes(query)) {
+                            listNameMatch = pos;
+                        }
+                    }
                 });
+
+                // Vista Organigrama: no ocultar nada, solo expandir la rama del match
+                const cards = document.querySelectorAll('.org-card');
+                let treeNameMatch = null;
+                let treeAnyMatch = null;
+                if (query !== '') {
+                    cards.forEach(card => {
+                        const text = card.textContent.toLowerCase();
+                        if (!text.includes(query)) return;
+                        const li = card.closest('li');
+                        if (li) revealTreeNode(li);
+                        if (!treeAnyMatch) treeAnyMatch = card;
+                        const nameEl = card.querySelector('.org-card-name');
+                        if (!treeNameMatch && nameEl && nameEl.textContent.toLowerCase().includes(query)) {
+                            treeNameMatch = card;
+                        }
+                    });
+                }
+
+                if (query === '') return;
+
+                // Resaltar el resultado en la vista que esté visible
+                const listVisible = document.getElementById('listView').style.display !== 'none';
+                const chartVisible = document.getElementById('chartView').style.display !== 'none';
+                if (listVisible) {
+                    const target = listNameMatch || listAnyMatch;
+                    if (target) flashHighlight(target);
+                } else if (chartVisible) {
+                    const target = treeNameMatch || treeAnyMatch;
+                    if (target) flashHighlight(target);
+                }
             });
         }
 
