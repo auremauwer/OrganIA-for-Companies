@@ -137,13 +137,34 @@
             background: #f8f9fa;
             border-radius: 8px;
             overflow: hidden;
-            border-left: 4px solid #2a5298;
+            border-left: 4px solid var(--row-accent, #2a5298);
             transition: all 0.3s ease;
         }
 
         .org-position:hover {
             box-shadow: 0 4px 12px rgba(42, 82, 152, 0.15);
             transform: translateX(4px);
+        }
+
+        .org-position.staff-row {
+            border-left-style: dashed;
+            background: #f4f5f8;
+        }
+
+        .org-position.has-recognition {
+            border-left-color: #d4a017;
+            box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.4);
+        }
+
+        .list-count-badge {
+            display: inline-block;
+            background: var(--row-accent, #2a5298);
+            color: white;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 10px;
+            margin-top: 6px;
         }
 
         .position-header {
@@ -1130,15 +1151,25 @@
                     sections[dept] = section.querySelector('.hierarchy');
                 }
 
-                const pos = document.createElement('div');
-                pos.className = 'org-position';
                 const hasChildren = node.children && node.children.length > 0;
+                const directChildren = node.children ? node.children.length : 0;
+                const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
+                const accent = node.displayAccent || node.accent || '#2a5298';
+                const isAssistant = node.role && node.role.toLowerCase().includes('asistente');
+
+                const pos = document.createElement('div');
+                pos.className = 'org-position' + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition' : '');
+                pos.style.setProperty('--row-accent', accent);
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
                         <div class="position-info">
-                            <div class="person-name">${node.name}${node.badge ? `<span class="list-recognition-badge">🏆 ${node.badge}</span>` : ''}</div>
+                            <div class="person-name">
+                                ${isAssistant ? '<span class="org-staff-label">Staff</span>' : ''}
+                                ${node.name}${node.badge ? `<span class="list-recognition-badge">🏆 ${node.badge}</span>` : ''}
+                            </div>
                             <div class="person-role">${node.role}</div>
                             ${node.badgeReason ? `<div class="org-recognition-reason">${node.badgeReason}</div>` : ''}
+                            ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
                         </div>
                         ${hasChildren ? '<span class="position-expand">▼</span>' : ''}
                     </div>
