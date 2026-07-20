@@ -629,18 +629,50 @@
             padding: 14px;
         }
 
-        .org-avatar {
-            width: 38px;
-            height: 38px;
+        .org-photo {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
             border-radius: 50%;
-            background: var(--accent);
+            background: #eef1f6;
+            border: 1px solid #dde3ec;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .org-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .org-photo.list-photo {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+        }
+
+        .org-card-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .org-card-headtext {
+            min-width: 0;
+        }
+
+        .org-card-headtext .org-card-name {
+            margin-bottom: 2px;
+        }
+
+        .list-head {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
         }
 
         .org-card-name {
@@ -1121,6 +1153,16 @@
             return depts;
         }
 
+        const SILHOUETTE_SVG = '<svg viewBox="0 0 24 24" width="60%" height="60%" fill="#9aa5b8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8v1H4v-1z"/></svg>';
+
+        function avatarHtml(node, extraClass) {
+            const cls = 'org-photo' + (extraClass ? ' ' + extraClass : '');
+            if (node.photo) {
+                return `<div class="${cls}"><img src="${node.photo}" alt="${node.name}"></div>`;
+            }
+            return `<div class="${cls}">${SILHOUETTE_SVG}</div>`;
+        }
+
         function buildTreeNode(node, depth = 0) {
             const li = document.createElement('li');
             const accent = node.displayAccent || node.accent || '#2a5298';
@@ -1143,8 +1185,13 @@
                     <div class="org-card-body">
                         ${isAssistant ? '<div class="org-staff-label">Staff</div>' : ''}
                         ${node.badge ? `<div class="org-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</div>` : ''}
-                        <div class="org-card-name">${node.name}</div>
-                        <div class="org-tag-value">${node.role}</div>
+                        <div class="org-card-head">
+                            ${avatarHtml(node)}
+                            <div class="org-card-headtext">
+                                <div class="org-card-name">${node.name}</div>
+                                <div class="org-tag-value">${node.role}</div>
+                            </div>
+                        </div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
                         ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                         ${badge}
@@ -1206,13 +1253,18 @@
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
                         <div class="position-info">
-                            <div class="person-name">
-                                ${isAssistant ? '<span class="org-staff-label">Staff</span>' : ''}
-                                ${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}
+                            <div class="list-head">
+                                ${avatarHtml(node, 'list-photo')}
+                                <div style="min-width:0; flex:1;">
+                                    <div class="person-name">
+                                        ${isAssistant ? '<span class="org-staff-label">Staff</span>' : ''}
+                                        ${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}
+                                    </div>
+                                    <div class="person-role">${node.role}</div>
+                                    ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
+                                    ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
+                                </div>
                             </div>
-                            <div class="person-role">${node.role}</div>
-                            ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
-                            ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
                         </div>
                         ${hasChildren ? '<span class="position-expand">▼</span>' : ''}
                     </div>
