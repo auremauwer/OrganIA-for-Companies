@@ -598,6 +598,46 @@
             margin-bottom: 6px;
         }
 
+        /* Posición vacante: aún no hay persona asignada */
+        .org-card.vacant-card {
+            background: #fafbfc;
+            border: 2px dashed #b7c0cf;
+        }
+
+        .org-card.vacant-card .org-card-bar {
+            background: repeating-linear-gradient(90deg, #b7c0cf, #b7c0cf 6px, transparent 6px, transparent 12px);
+        }
+
+        .org-position.vacant-row {
+            border-left-style: dashed;
+            border-left-color: #b7c0cf;
+            background: #fafbfc;
+        }
+
+        .org-photo.vacant-photo {
+            background: #f2f4f7;
+            border: 2px dashed #b7c0cf;
+        }
+
+        .vacant-name {
+            color: #7c8797 !important;
+            font-style: italic;
+        }
+
+        .vacant-tag {
+            display: inline-block;
+            background: #eef1f6;
+            color: #64748b;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            border: 1px dashed #b7c0cf;
+        }
+
         .org-toggle-hint {
             display: flex;
             align-items: center;
@@ -989,7 +1029,8 @@
                       children: [
                         { name: 'Javier Medina', role: 'QA Lead' },
                         { name: 'Camila Flores', role: 'Security Specialist' },
-                        { name: 'Diego Santana', role: 'QA Automation Engineer' }
+                        { name: 'Diego Santana', role: 'QA Automation Engineer' },
+                        { role: 'Penetration Tester', vacant: true }
                       ]}
                   ]},
                 { name: 'Dra. Marcela Hidalgo', role: 'Chief Data Officer', team: 'Datos', accent: '#e2861c',
@@ -1058,7 +1099,8 @@
                       children: [
                         { name: 'Julio Morales', role: 'Senior Accountant', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Junio 2026', badgeReason: 'Logró el cierre contable más rápido en la historia de la empresa' },
                         { name: 'Patricia Zambrano', role: 'Accounts Payable Manager' },
-                        { name: 'Vicente Soto', role: 'Financial Analyst' }
+                        { name: 'Vicente Soto', role: 'Financial Analyst' },
+                        { role: 'Junior Accountant', vacant: true }
                       ]},
                     { name: 'Marcelo Díaz', role: 'Head of Financial Planning', team: 'Finanzas', accent: '#17be79',
                       children: [
@@ -1138,7 +1180,7 @@
 
         // Funciones auxiliares
         function countEmployees(node) {
-            let count = 1;
+            let count = node.vacant ? 0 : 1;
             if (node.children) {
                 node.children.forEach(child => count += countEmployees(child));
             }
@@ -1154,9 +1196,13 @@
         }
 
         const SILHOUETTE_SVG = '<svg viewBox="0 0 24 24" width="60%" height="60%" fill="#9aa5b8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8v1H4v-1z"/></svg>';
+        const VACANT_SVG = '<svg viewBox="0 0 24 24" width="50%" height="50%" fill="none" stroke="#9aa5b8" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
         function avatarHtml(node, extraClass) {
             const cls = 'org-photo' + (extraClass ? ' ' + extraClass : '');
+            if (node.vacant) {
+                return `<div class="${cls} vacant-photo">${VACANT_SVG}</div>`;
+            }
             if (node.photo) {
                 return `<div class="${cls}"><img src="${node.photo}" alt="${node.name}"></div>`;
             }
@@ -1180,15 +1226,16 @@
             }
 
             li.innerHTML = `
-                <div class="org-card ${node.badge ? 'has-recognition ' + badgeTypeClass : ''}" style="--accent: ${accent}">
+                <div class="org-card ${node.vacant ? 'vacant-card' : (node.badge ? 'has-recognition ' + badgeTypeClass : '')}" style="--accent: ${accent}">
                     <div class="org-card-bar"></div>
                     <div class="org-card-body">
                         ${isAssistant ? '<div class="org-staff-label">Staff</div>' : ''}
+                        ${node.vacant ? '<div class="vacant-tag">💼 Vacante</div>' : ''}
                         ${node.badge ? `<div class="org-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</div>` : ''}
                         <div class="org-card-head">
                             ${avatarHtml(node)}
                             <div class="org-card-headtext">
-                                <div class="org-card-name">${node.name}</div>
+                                <div class="org-card-name ${node.vacant ? 'vacant-name' : ''}">${node.vacant ? 'Posición vacante' : node.name}</div>
                                 <div class="org-tag-value">${node.role}</div>
                             </div>
                         </div>
@@ -1248,7 +1295,7 @@
                 const badgeIcon = node.badgeType === 'ai' ? '🤖' : '🏅';
 
                 const pos = document.createElement('div');
-                pos.className = 'org-position' + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition ' + badgeTypeClass : '');
+                pos.className = 'org-position' + (node.vacant ? ' vacant-row' : '') + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition ' + badgeTypeClass : '');
                 pos.style.setProperty('--row-accent', accent);
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
@@ -1258,7 +1305,7 @@
                                 <div style="min-width:0; flex:1;">
                                     <div class="person-name">
                                         ${isAssistant ? '<span class="org-staff-label">Staff</span>' : ''}
-                                        ${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}
+                                        ${node.vacant ? `<span class="vacant-tag">💼 Vacante</span> <span class="vacant-name">Posición vacante</span>` : `${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}`}
                                     </div>
                                     <div class="person-role">${node.role}</div>
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
