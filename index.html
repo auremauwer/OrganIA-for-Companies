@@ -1196,12 +1196,8 @@
         document.getElementById('stat-chiefs').textContent = chiefCount;
         document.getElementById('stat-chiefs-2').textContent = chiefCount;
 
-        // Renderizar vistas
-        document.getElementById('orgTreeRoot').appendChild(buildTreeNode(ORG_DATA));
-        buildListView();
-
-
-        // Propagar colores de Chiefs a subordinados
+        // Propagar colores de Chiefs a subordinados (debe ejecutarse ANTES de renderizar,
+        // para que las tarjetas ya nazcan con el color heredado del Chief de su rama)
         function inheritAccents(node, chiefAccent = null) {
             const accent = node.accent || chiefAccent;
             node.displayAccent = accent;
@@ -1209,16 +1205,11 @@
                 node.children.forEach(child => inheritAccents(child, accent));
             }
         }
-
-        // Heredar colores desde cada Chief
-        if (ORG_DATA.children) {
-            ORG_DATA.children.forEach(child => {
-                if (child.role && child.role.includes('Chief')) {
-                    inheritAccents(child, child.accent);
-                }
-            });
-        }
         inheritAccents(ORG_DATA);
+
+        // Renderizar vistas
+        document.getElementById('orgTreeRoot').appendChild(buildTreeNode(ORG_DATA));
+        buildListView();
 
         // Controles de vista
         document.querySelectorAll('.view-toggle-btn').forEach(btn => {
