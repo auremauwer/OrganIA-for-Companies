@@ -876,6 +876,31 @@
             transform: translateY(-2px);
         }
 
+        .data-io-label {
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .control-btn.reset-btn {
+            background: #b91c1c;
+        }
+
+        .control-btn.reset-btn:hover {
+            background: #7f1d1d;
+        }
+
+        .custom-data-notice {
+            background: #fff8e1;
+            color: #7a5c00;
+            border: 1px solid #f0d98c;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
         .hidden-item {
             display: none;
         }
@@ -928,6 +953,18 @@
             </div>
             <div class="filters" style="display:flex;">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
+            </div>
+            <div class="search-bar" style="margin-top: 10px;">
+                <span class="data-io-label">Datos de la organización:</span>
+                <div class="control-btns">
+                    <button class="control-btn" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
+                    <button class="control-btn" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
+                    <button class="control-btn reset-btn" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
+                </div>
+                <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
+            </div>
+            <div id="customDataNotice" class="custom-data-notice" style="display:none;">
+                📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
         </div>
     </header>
@@ -1000,7 +1037,7 @@
 
     <script>
         // ORG_DATA - Estructura Organizacional
-        const ORG_DATA = {
+        let ORG_DATA = {
             name: 'Carlos Mendoza', role: 'Chief Executive Officer', team: 'Dirección General', accent: '#1e3c72',
             children: [
                 { name: 'Magdalena Flores', role: 'Asistente Ejecutivo', team: 'Dirección General', accent: '#1e3c72' },
@@ -1175,6 +1212,22 @@
                       ]}
                   ]}
             ]
+        }
+
+        // Referencia fija a los datos de ejemplo (no cambia aunque se cargue un JSON propio)
+        const EXAMPLE_ORG_DATA = ORG_DATA;
+        const CUSTOM_DATA_KEY = 'organia_custom_org_data';
+        const UPLOAD_PIN = '2026';
+        let usingCustomData = false;
+
+        try {
+            const storedData = localStorage.getItem(CUSTOM_DATA_KEY);
+            if (storedData) {
+                ORG_DATA = JSON.parse(storedData);
+                usingCustomData = true;
+            }
+        } catch (e) {
+            console.error('No se pudo cargar la organización guardada, se usan los datos por defecto.', e);
         }
 
         // Funciones auxiliares
@@ -1527,6 +1580,97 @@
                 el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
             }
         });
+
+        // ---- Descargar / Subir configuración de la organización (JSON) ----
+        const downloadExampleBtn = document.getElementById('downloadExampleBtn');
+        const uploadJsonBtn = document.getElementById('uploadJsonBtn');
+        const resetOrgBtn = document.getElementById('resetOrgBtn');
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const customDataNotice = document.getElementById('customDataNotice');
+
+        if (usingCustomData) {
+            if (resetOrgBtn) resetOrgBtn.style.display = '';
+            if (customDataNotice) customDataNotice.style.display = 'block';
+        }
+
+        if (downloadExampleBtn) {
+            downloadExampleBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(EXAMPLE_ORG_DATA, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'organia-ejemplo.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        if (uploadJsonBtn) {
+            uploadJsonBtn.addEventListener('click', () => {
+                jsonFileInput.click();
+            });
+        }
+
+        function validateOrgNode(node) {
+            if (!node || typeof node !== 'object') return 'El nodo raíz no es un objeto válido.';
+            if (!node.role || typeof node.role !== 'string') return 'Falta el campo "role" (obligatorio) en el nodo raíz.';
+            if (node.children && !Array.isArray(node.children)) return 'El campo "children" debe ser una lista.';
+            return null;
+        }
+
+        if (jsonFileInput) {
+            jsonFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const pin = window.prompt('Ingresa el PIN para actualizar la organización:');
+                if (pin === null) {
+                    jsonFileInput.value = '';
+                    return;
+                }
+                if (pin !== UPLOAD_PIN) {
+                    alert('PIN incorrecto. No se realizaron cambios.');
+                    jsonFileInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(evt.target.result);
+                    } catch (err) {
+                        alert('El archivo no es un JSON válido: ' + err.message);
+                        jsonFileInput.value = '';
+                        return;
+                    }
+                    const error = validateOrgNode(parsed);
+                    if (error) {
+                        alert('El JSON no tiene el formato esperado.\n' + error);
+                        jsonFileInput.value = '';
+                        return;
+                    }
+                    localStorage.setItem(CUSTOM_DATA_KEY, JSON.stringify(parsed));
+                    alert('¡Organización actualizada! La página se va a recargar.');
+                    location.reload();
+                };
+                reader.onerror = function() {
+                    alert('No se pudo leer el archivo.');
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        if (resetOrgBtn) {
+            resetOrgBtn.addEventListener('click', () => {
+                if (confirm('¿Restablecer la organización original y descartar tu JSON cargado?')) {
+                    localStorage.removeItem(CUSTOM_DATA_KEY);
+                    location.reload();
+                }
+            });
+        }
     </script>
 </body>
 </html>
