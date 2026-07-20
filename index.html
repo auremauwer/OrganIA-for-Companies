@@ -18,10 +18,72 @@
         }
 
         header {
+            position: relative;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
             padding: 40px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .settings-gear-btn {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.65);
+            font-size: 0.85rem;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .settings-gear-btn:hover {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
+
+        .settings-menu {
+            position: absolute;
+            top: 46px;
+            right: 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            z-index: 50;
+            min-width: 220px;
+        }
+
+        .settings-menu-item {
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: #2c3e50;
+            cursor: pointer;
+        }
+
+        .settings-menu-item:hover {
+            background: #eef1f7;
+        }
+
+        .settings-menu-item.reset-item {
+            color: #b91c1c;
+            border-top: 1px solid #eee;
+            margin-top: 2px;
+            padding-top: 8px;
         }
 
         .container {
@@ -876,21 +938,6 @@
             transform: translateY(-2px);
         }
 
-        .data-io-label {
-            color: #64748b;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-right: 4px;
-        }
-
-        .control-btn.reset-btn {
-            background: #b91c1c;
-        }
-
-        .control-btn.reset-btn:hover {
-            background: #7f1d1d;
-        }
-
         .custom-data-notice {
             background: #fff8e1;
             color: #7a5c00;
@@ -954,19 +1001,18 @@
             <div class="filters" style="display:flex;">
                 <button class="filter-btn active" data-filter="all">Ver Todo</button>
             </div>
-            <div class="search-bar" style="margin-top: 10px;">
-                <span class="data-io-label">Datos de la organización:</span>
-                <div class="control-btns">
-                    <button class="control-btn" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
-                    <button class="control-btn" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
-                    <button class="control-btn reset-btn" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
-                </div>
-                <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
-            </div>
             <div id="customDataNotice" class="custom-data-notice" style="display:none;">
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
         </div>
+
+        <button id="settingsGearBtn" class="settings-gear-btn" title="Configuración" aria-label="Configuración">⚙</button>
+        <div id="settingsMenu" class="settings-menu" style="display:none;">
+            <button class="settings-menu-item" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
+            <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
+            <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
+        </div>
+        <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
     </header>
 
     <main>
@@ -1581,17 +1627,51 @@
             }
         });
 
-        // ---- Descargar / Subir configuración de la organización (JSON) ----
+        // ---- Configuración discreta: engranaje protegido con PIN ----
+        const settingsGearBtn = document.getElementById('settingsGearBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
         const downloadExampleBtn = document.getElementById('downloadExampleBtn');
         const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const jsonFileInput = document.getElementById('jsonFileInput');
         const customDataNotice = document.getElementById('customDataNotice');
+        let settingsUnlocked = false;
 
         if (usingCustomData) {
             if (resetOrgBtn) resetOrgBtn.style.display = '';
             if (customDataNotice) customDataNotice.style.display = 'block';
         }
+
+        function closeSettingsMenu() {
+            if (settingsMenu) settingsMenu.style.display = 'none';
+        }
+
+        if (settingsGearBtn) {
+            settingsGearBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (settingsMenu.style.display === 'flex') {
+                    closeSettingsMenu();
+                    return;
+                }
+                if (!settingsUnlocked) {
+                    const pin = window.prompt('Ingresa el PIN de configuración:');
+                    if (pin === null) return;
+                    if (pin !== UPLOAD_PIN) {
+                        alert('PIN incorrecto.');
+                        return;
+                    }
+                    settingsUnlocked = true;
+                }
+                settingsMenu.style.display = 'flex';
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (settingsMenu && settingsMenu.style.display === 'flex' &&
+                !settingsMenu.contains(e.target) && e.target !== settingsGearBtn) {
+                closeSettingsMenu();
+            }
+        });
 
         if (downloadExampleBtn) {
             downloadExampleBtn.addEventListener('click', () => {
@@ -1604,11 +1684,13 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+                closeSettingsMenu();
             });
         }
 
         if (uploadJsonBtn) {
             uploadJsonBtn.addEventListener('click', () => {
+                closeSettingsMenu();
                 jsonFileInput.click();
             });
         }
@@ -1624,17 +1706,6 @@
             jsonFileInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-
-                const pin = window.prompt('Ingresa el PIN para actualizar la organización:');
-                if (pin === null) {
-                    jsonFileInput.value = '';
-                    return;
-                }
-                if (pin !== UPLOAD_PIN) {
-                    alert('PIN incorrecto. No se realizaron cambios.');
-                    jsonFileInput.value = '';
-                    return;
-                }
 
                 const reader = new FileReader();
                 reader.onload = function(evt) {
@@ -1665,6 +1736,7 @@
 
         if (resetOrgBtn) {
             resetOrgBtn.addEventListener('click', () => {
+                closeSettingsMenu();
                 if (confirm('¿Restablecer la organización original y descartar tu JSON cargado?')) {
                     localStorage.removeItem(CUSTOM_DATA_KEY);
                     location.reload();
