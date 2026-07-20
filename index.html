@@ -1483,6 +1483,7 @@
 
         if (expandAllBtn) {
             expandAllBtn.addEventListener('click', () => {
+                // Vista Lista
                 document.querySelectorAll('.dept-content.collapsed').forEach(el => {
                     el.classList.remove('collapsed');
                     el.previousElementSibling.querySelector('.toggle-icon').classList.remove('collapsed');
@@ -1491,11 +1492,16 @@
                     el.classList.add('expanded');
                     el.previousElementSibling.querySelector('.position-expand').classList.add('expanded');
                 });
+                // Vista Organigrama
+                document.querySelectorAll('#orgTreeRoot li.node-collapsed').forEach(el => {
+                    el.classList.remove('node-collapsed');
+                });
             });
         }
 
         if (collapseAllBtn) {
             collapseAllBtn.addEventListener('click', () => {
+                // Vista Lista
                 document.querySelectorAll('.dept-content:not(.collapsed)').forEach(el => {
                     el.classList.add('collapsed');
                     el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
@@ -1505,6 +1511,10 @@
                     if (el.previousElementSibling && el.previousElementSibling.querySelector('.position-expand')) {
                         el.previousElementSibling.querySelector('.position-expand').classList.remove('expanded');
                     }
+                });
+                // Vista Organigrama
+                document.querySelectorAll('#orgTreeRoot li.has-children:not(.node-collapsed)').forEach(el => {
+                    el.classList.add('node-collapsed');
                 });
             });
         }
