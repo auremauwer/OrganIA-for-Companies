@@ -151,7 +151,12 @@
             background: #f4f5f8;
         }
 
-        .org-position.has-recognition {
+        .org-position.has-recognition.badge-ai {
+            border-left-color: #6d28d9;
+            box-shadow: 0 0 0 1px rgba(109, 40, 217, 0.35);
+        }
+
+        .org-position.has-recognition.badge-month {
             border-left-color: #d4a017;
             box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.4);
         }
@@ -507,8 +512,14 @@
             display: none;
         }
 
-        /* Reconocimiento / distintivo de colaborador destacado */
-        .org-card.has-recognition {
+        /* Reconocimiento: dos tipos distintos, no deben verse iguales.
+           "AI Champion" (badge-ai, morado) = impulsa adopción de IA.
+           "Colaborador Destacado" (badge-month, dorado) = premio mensual rotativo. */
+        .org-card.has-recognition.badge-ai {
+            box-shadow: 0 0 0 2px #6d28d9, 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .org-card.has-recognition.badge-month {
             box-shadow: 0 0 0 2px #d4a017, 0 2px 8px rgba(0,0,0,0.06);
         }
 
@@ -516,8 +527,6 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            background: linear-gradient(135deg, #f5c542 0%, #d4a017 100%);
-            color: #4a3400;
             font-size: 0.68rem;
             font-weight: 700;
             padding: 3px 9px;
@@ -525,25 +534,55 @@
             margin-bottom: 6px;
         }
 
+        .org-recognition-badge.badge-ai {
+            background: linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%);
+            color: white;
+        }
+
+        .org-recognition-badge.badge-month {
+            background: linear-gradient(135deg, #f5c542 0%, #d4a017 100%);
+            color: #4a3400;
+        }
+
+        .badge-period {
+            font-weight: 600;
+            opacity: 0.85;
+        }
+
         .org-recognition-reason {
             font-size: 0.7rem;
-            color: #8a6d00;
             font-style: italic;
             margin-top: 4px;
             line-height: 1.3;
+        }
+
+        .org-recognition-reason.badge-ai {
+            color: #5b21b6;
+        }
+
+        .org-recognition-reason.badge-month {
+            color: #8a6d00;
         }
 
         .list-recognition-badge {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            background: linear-gradient(135deg, #f5c542 0%, #d4a017 100%);
-            color: #4a3400;
             font-size: 0.7rem;
             font-weight: 700;
             padding: 2px 8px;
             border-radius: 10px;
             margin-left: 8px;
+        }
+
+        .list-recognition-badge.badge-ai {
+            background: linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%);
+            color: white;
+        }
+
+        .list-recognition-badge.badge-month {
+            background: linear-gradient(135deg, #f5c542 0%, #d4a017 100%);
+            color: #4a3400;
         }
 
         .org-staff-label {
@@ -899,7 +938,7 @@
                     { name: 'Alejandro Gómez', role: 'VP Engineering', team: 'Tecnología', accent: '#e21c1c',
                       children: [
                         { name: 'Pedro Ruiz', role: 'Engineering Lead Frontend' },
-                        { name: 'Sofia Chen', role: 'Senior Developer Frontend', badge: 'AI Champion', badgeReason: 'Desarrolló un asistente interno con IA para acelerar la revisión de código, adoptado por todo el equipo de frontend' },
+                        { name: 'Sofia Chen', role: 'Senior Developer Frontend', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Desarrolló un asistente interno con IA para acelerar la revisión de código, adoptado por todo el equipo de frontend' },
                         { name: 'Marco López', role: 'Frontend Specialist' }
                       ]},
                     { name: 'Valentina Soto', role: 'VP Backend Services', team: 'Tecnología', accent: '#e21c1c',
@@ -925,11 +964,11 @@
                   children: [
                     { name: 'Roberto Silva', role: 'Head of Data Engineering', team: 'Datos', accent: '#e2861c',
                       children: [
-                        { name: 'Natalia Ramos', role: 'Senior Data Engineer', badge: 'Colaborador Destacado', badgeReason: 'Optimizó el pipeline de datos reduciendo los tiempos de carga en 40%' },
+                        { name: 'Natalia Ramos', role: 'Senior Data Engineer', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Marzo 2026', badgeReason: 'Optimizó el pipeline de datos reduciendo los tiempos de carga en 40%' },
                         { name: 'Francisco Ruiz', role: 'Data Pipeline Specialist' },
                         { name: 'Ximena Vega', role: 'ETL Developer' }
                       ]},
-                    { name: 'Beatriz Sánchez', role: 'Head of Analytics', team: 'Datos', accent: '#e2861c', badge: 'AI Champion', badgeReason: 'Implementó dashboards con IA generativa que automatizan la generación de insights para el equipo ejecutivo',
+                    { name: 'Beatriz Sánchez', role: 'Head of Analytics', team: 'Datos', accent: '#e2861c', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Implementó dashboards con IA generativa que automatizan la generación de insights para el equipo ejecutivo',
                       children: [
                         { name: 'Felipe Rosales', role: 'Analytics Lead' },
                         { name: 'Mariana Ruiz', role: 'Business Intelligence Analyst' },
@@ -937,7 +976,7 @@
                       ]},
                     { name: 'Vicente Morales', role: 'Head of Machine Learning', team: 'Datos', accent: '#e2861c',
                       children: [
-                        { name: 'Joaquín Poblete', role: 'ML Engineer Senior', badge: 'AI Champion', badgeReason: 'Lideró la implementación del modelo de recomendaciones que redujo el churn en 12%' },
+                        { name: 'Joaquín Poblete', role: 'ML Engineer Senior', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Lideró la implementación del modelo de recomendaciones que redujo el churn en 12%' },
                         { name: 'Carla Quintanilla', role: 'ML Specialist' },
                         { name: 'Rodrigo Sepúlveda', role: 'ML Researcher' }
                       ]}
@@ -946,7 +985,7 @@
                   children: [
                     { name: 'Rodrigo Núñez', role: 'Head of Recruitment', team: 'RRHH', accent: '#ccc619',
                       children: [
-                        { name: 'Valentina Araya', role: 'Senior Recruiter', badge: 'Colaborador Destacado', badgeReason: 'Redujo el tiempo promedio de contratación en 30% durante el último trimestre' },
+                        { name: 'Valentina Araya', role: 'Senior Recruiter', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Abril 2026', badgeReason: 'Redujo el tiempo promedio de contratación en 30% durante el último trimestre' },
                         { name: 'Pamela Hidalgo', role: 'Talent Acquisition Specialist' },
                         { name: 'Lisandro Fuentes', role: 'Recruitment Coordinator' }
                       ]},
@@ -966,13 +1005,13 @@
                   children: [
                     { name: 'Lorena Mendoza', role: 'Head of Supply Chain', team: 'Operaciones', accent: '#5dbe17',
                       children: [
-                        { name: 'Gustavo Ortiz', role: 'Supply Chain Manager', badge: 'AI Champion', badgeReason: 'Implementó un modelo de forecasting con IA que optimizó los niveles de inventario y redujo quiebres de stock' },
+                        { name: 'Gustavo Ortiz', role: 'Supply Chain Manager', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Implementó un modelo de forecasting con IA que optimizó los niveles de inventario y redujo quiebres de stock' },
                         { name: 'Carolina Bravo', role: 'Procurement Specialist' },
                         { name: 'Silvia Cardona', role: 'Logistics Coordinator' }
                       ]},
                     { name: 'Fabricio Patel', role: 'Head of Facilities', team: 'Operaciones', accent: '#5dbe17',
                       children: [
-                        { name: 'Constanza Riquelme', role: 'Facilities Manager', badge: 'Colaborador Destacado', badgeReason: 'Lideró la reorganización de oficinas logrando un ahorro significativo en costos operativos' },
+                        { name: 'Constanza Riquelme', role: 'Facilities Manager', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Mayo 2026', badgeReason: 'Lideró la reorganización de oficinas logrando un ahorro significativo en costos operativos' },
                         { name: 'Miguel Arraya', role: 'Maintenance Specialist' }
                       ]},
                     { name: 'Pilar Fuentes', role: 'Head of Vendor Management', team: 'Operaciones', accent: '#5dbe17',
@@ -985,7 +1024,7 @@
                   children: [
                     { name: 'Rocío García', role: 'Head of Accounting', team: 'Finanzas', accent: '#17be79',
                       children: [
-                        { name: 'Julio Morales', role: 'Senior Accountant', badge: 'Colaborador Destacado', badgeReason: 'Logró el cierre contable más rápido en la historia de la empresa' },
+                        { name: 'Julio Morales', role: 'Senior Accountant', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Junio 2026', badgeReason: 'Logró el cierre contable más rápido en la historia de la empresa' },
                         { name: 'Patricia Zambrano', role: 'Accounts Payable Manager' },
                         { name: 'Vicente Soto', role: 'Financial Analyst' }
                       ]},
@@ -1003,7 +1042,7 @@
                   ]},
                 { name: 'Andrés Pérez', role: 'Chief Marketing Officer', team: 'Marketing', accent: '#1cbbe2',
                   children: [
-                    { name: 'Valeria Zamora', role: 'Head of Product Marketing', team: 'Marketing', accent: '#1cbbe2', badge: 'AI Champion', badgeReason: 'Lideró la adopción de IA generativa en la producción de contenido, reduciendo en 50% el tiempo de campañas',
+                    { name: 'Valeria Zamora', role: 'Head of Product Marketing', team: 'Marketing', accent: '#1cbbe2', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Lideró la adopción de IA generativa en la producción de contenido, reduciendo en 50% el tiempo de campañas',
                       children: [
                         { name: 'Joaquín López', role: 'Product Marketing Manager' },
                         { name: 'Carla Mendez', role: 'Marketing Strategist' },
@@ -1029,7 +1068,7 @@
                         { name: 'Valentina López', role: 'Legal Analyst' },
                         { name: 'Roberto Núñez', role: 'Contracts Attorney' }
                       ]},
-                    { name: 'Javier Romero', role: 'Head of Compliance', team: 'Legal', accent: '#256be4', badge: 'AI Champion', badgeReason: 'Diseñó un sistema con IA para detectar riesgos de cumplimiento normativo de forma automática',
+                    { name: 'Javier Romero', role: 'Head of Compliance', team: 'Legal', accent: '#256be4', badge: 'AI Champion', badgeType: 'ai', badgeReason: 'Diseñó un sistema con IA para detectar riesgos de cumplimiento normativo de forma automática',
                       children: [
                         { name: 'Marina Salazar', role: 'Compliance Manager' },
                         { name: 'Diego Fuentes', role: 'Compliance Analyst' }
@@ -1039,7 +1078,7 @@
                   children: [
                     { name: 'Francisco Jara', role: 'Head of Enterprise Risk', team: 'Riesgo', accent: '#4425e4',
                       children: [
-                        { name: 'Isabela Mendoza', role: 'Risk Manager', badge: 'Colaborador Destacado', badgeReason: 'Identificó y mitigó un riesgo crítico antes de que impactara la operación' },
+                        { name: 'Isabela Mendoza', role: 'Risk Manager', badge: 'Colaborador Destacado', badgeType: 'month', badgePeriod: 'Julio 2026', badgeReason: 'Identificó y mitigó un riesgo crítico antes de que impactara la operación' },
                         { name: 'Carlos Acuña', role: 'Risk Analyst' },
                         { name: 'Verónica Torres', role: 'Risk Assessment Specialist' }
                       ]},
@@ -1091,21 +1130,23 @@
 
             const badge = hasChildren ? `<div class="org-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : '';
             const isAssistant = node.role && node.role.toLowerCase().includes('asistente');
+            const badgeTypeClass = node.badgeType === 'ai' ? 'badge-ai' : 'badge-month';
+            const badgeIcon = node.badgeType === 'ai' ? '🤖' : '🏅';
 
             if (isAssistant) {
                 li.classList.add('assistant-branch');
             }
 
             li.innerHTML = `
-                <div class="org-card ${node.badge ? 'has-recognition' : ''}" style="--accent: ${accent}">
+                <div class="org-card ${node.badge ? 'has-recognition ' + badgeTypeClass : ''}" style="--accent: ${accent}">
                     <div class="org-card-bar"></div>
                     <div class="org-card-body">
                         ${isAssistant ? '<div class="org-staff-label">Staff</div>' : ''}
-                        ${node.badge ? `<div class="org-recognition-badge">🏆 ${node.badge}</div>` : ''}
+                        ${node.badge ? `<div class="org-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</div>` : ''}
                         <div class="org-card-name">${node.name}</div>
                         <div class="org-tag-value">${node.role}</div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
-                        ${node.badgeReason ? `<div class="org-recognition-reason">${node.badgeReason}</div>` : ''}
+                        ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                         ${badge}
                     </div>
                 </div>
@@ -1156,19 +1197,21 @@
                 const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
                 const accent = node.displayAccent || node.accent || '#2a5298';
                 const isAssistant = node.role && node.role.toLowerCase().includes('asistente');
+                const badgeTypeClass = node.badgeType === 'ai' ? 'badge-ai' : 'badge-month';
+                const badgeIcon = node.badgeType === 'ai' ? '🤖' : '🏅';
 
                 const pos = document.createElement('div');
-                pos.className = 'org-position' + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition' : '');
+                pos.className = 'org-position' + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition ' + badgeTypeClass : '');
                 pos.style.setProperty('--row-accent', accent);
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
                         <div class="position-info">
                             <div class="person-name">
                                 ${isAssistant ? '<span class="org-staff-label">Staff</span>' : ''}
-                                ${node.name}${node.badge ? `<span class="list-recognition-badge">🏆 ${node.badge}</span>` : ''}
+                                ${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}
                             </div>
                             <div class="person-role">${node.role}</div>
-                            ${node.badgeReason ? `<div class="org-recognition-reason">${node.badgeReason}</div>` : ''}
+                            ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                             ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
                         </div>
                         ${hasChildren ? '<span class="position-expand">▼</span>' : ''}
