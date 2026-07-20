@@ -598,25 +598,24 @@
             margin-bottom: 6px;
         }
 
-        /* Posición vacante: aún no hay persona asignada */
+        /* Posición vacante: aún no hay persona asignada. Siempre gris, sin importar el departamento. */
         .org-card.vacant-card {
-            background: #fafbfc;
-            border: 2px dashed #b7c0cf;
+            background: #f4f5f7;
+            border: 1px solid #d3d8e0;
         }
 
         .org-card.vacant-card .org-card-bar {
-            background: repeating-linear-gradient(90deg, #b7c0cf, #b7c0cf 6px, transparent 6px, transparent 12px);
+            background: #b7c0cf;
         }
 
         .org-position.vacant-row {
-            border-left-style: dashed;
             border-left-color: #b7c0cf;
-            background: #fafbfc;
+            background: #f4f5f7;
         }
 
         .org-photo.vacant-photo {
-            background: #f2f4f7;
-            border: 2px dashed #b7c0cf;
+            background: #e3e6eb;
+            border: 1px solid #d3d8e0;
         }
 
         .vacant-name {
@@ -626,7 +625,7 @@
 
         .vacant-tag {
             display: inline-block;
-            background: #eef1f6;
+            background: #e3e6eb;
             color: #64748b;
             font-size: 0.6rem;
             font-weight: 700;
@@ -635,7 +634,6 @@
             padding: 2px 7px;
             border-radius: 4px;
             margin-bottom: 6px;
-            border: 1px dashed #b7c0cf;
         }
 
         .org-toggle-hint {
