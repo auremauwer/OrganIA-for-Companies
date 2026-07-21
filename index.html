@@ -1059,7 +1059,8 @@
             box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.45);
         }
 
-        .give-recognition-btn {
+        .give-recognition-btn,
+        .upload-photo-btn {
             display: none;
             background: #eef1f7;
             color: #2a5298;
@@ -1070,13 +1071,16 @@
             font-weight: 700;
             cursor: pointer;
             margin-top: 6px;
+            margin-right: 4px;
         }
 
-        .give-recognition-btn:hover {
+        .give-recognition-btn:hover,
+        .upload-photo-btn:hover {
             background: #dde7fb;
         }
 
-        body.edit-mode .give-recognition-btn {
+        body.edit-mode .give-recognition-btn,
+        body.edit-mode .upload-photo-btn {
             display: inline-block;
         }
 
@@ -1155,7 +1159,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: haz clic (izquierdo o derecho) en cualquier foto para subir una nueva, o en 🙌 Reconocer para darle un reconocimiento a alguien.
+                🖊 Modo edición activo: usa 📷 Cargar foto para cambiar la imagen de alguien (o haz clic sobre su foto), y 🙌 Reconocer para darle un reconocimiento.
             </div>
         </div>
 
@@ -1612,6 +1616,11 @@
             return `<button type="button" class="give-recognition-btn" data-person="${escapeAttr(node.name)}" onclick="giveRecognitionClick(event, this)">🙌 Reconocer</button>`;
         }
 
+        function uploadPhotoBtnHtml(node) {
+            if (!node.name || node.vacant) return '';
+            return `<button type="button" class="upload-photo-btn" data-person="${escapeAttr(node.name)}" onclick="uploadPhotoClick(event, this)">📷 Cargar foto</button>`;
+        }
+
         function avatarHtml(node, extraClass) {
             const cls = 'org-photo' + (extraClass ? ' ' + extraClass : '');
             if (node.vacant) {
@@ -1658,6 +1667,7 @@
                         ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                         ${recognitionsHtml(node)}
                         ${badge}
+                        ${uploadPhotoBtnHtml(node)}
                         ${giveRecognitionBtnHtml(node)}
                     </div>
                 </div>
@@ -1670,6 +1680,11 @@
                 li.appendChild(ul);
 
                 li.querySelector('.org-card').addEventListener('click', function(e) {
+                    // No colapsar (ni cortar la propagación) si el clic fue en un control
+                    // interactivo de la tarjeta: la foto o los botones de edición.
+                    if (e.target.closest('.org-photo[data-person], .give-recognition-btn, .upload-photo-btn')) {
+                        return;
+                    }
                     e.stopPropagation();
                     li.classList.toggle('node-collapsed');
                     refreshMinimap();
@@ -1736,6 +1751,7 @@
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                                     ${recognitionsHtml(node)}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
+                                    ${uploadPhotoBtnHtml(node)}
                                     ${giveRecognitionBtnHtml(node)}
                                 </div>
                             </div>
@@ -1858,6 +1874,13 @@
             location.reload();
         }
         window.giveRecognitionClick = giveRecognitionClick;
+
+        function uploadPhotoClick(event, btn) {
+            event.stopPropagation();
+            if (!settingsUnlocked) return;
+            startPhotoUpload(btn.getAttribute('data-person'));
+        }
+        window.uploadPhotoClick = uploadPhotoClick;
 
         // Búsqueda y Filtrado
         const searchInput = document.getElementById('searchInput');
