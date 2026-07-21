@@ -242,6 +242,16 @@
             margin-bottom: 2px;
         }
 
+        .list-children {
+            max-height: 10000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .list-children.collapsed {
+            max-height: 0;
+        }
+
         .position-header {
             padding: 16px;
             display: flex;
@@ -277,54 +287,6 @@
 
         .position-expand.expanded {
             transform: rotate(180deg);
-        }
-
-        .position-details {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-            background: white;
-            border-top: 1px solid #e5e9f0;
-        }
-
-        .position-details.expanded {
-            max-height: 300px;
-        }
-
-        .detail-content {
-            padding: 16px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .detail-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        .detail-value {
-            font-size: 0.95rem;
-            color: #2c3e50;
-            word-break: break-word;
-        }
-
-        .detail-value a {
-            color: #2a5298;
-            text-decoration: none;
-        }
-
-        .detail-value a:hover {
-            text-decoration: underline;
         }
 
         .team-members {
@@ -880,10 +842,6 @@
                 padding: 15px;
             }
 
-            .detail-content {
-                grid-template-columns: 1fr;
-            }
-
             .team-list {
                 grid-template-columns: 1fr;
             }
@@ -1418,9 +1376,11 @@
             container.innerHTML = '';
             const sections = {};
 
-            function addToList(node, parentDept = null, depth = 0, parentName = null) {
+            // Devuelve el <div class="list-node"> de este nodo, o null si ya se insertó
+            // directamente en la raíz de su propia sección (para que el padre no lo duplique).
+            function buildListNode(node, parentDept = null, depth = 0, parentName = null) {
                 const dept = node.team || parentDept;
-                if (!dept) return;
+                if (!dept) return null;
 
                 const isNewSection = !sections[dept];
                 if (isNewSection) {
@@ -1472,16 +1432,30 @@
                         </div>
                         ${hasChildren ? '<span class="position-expand">▼</span>' : ''}
                     </div>
-                    ${hasChildren ? `<div class="position-details"><div class="detail-content"><div class="detail-item"><span class="detail-label">Rol</span><span class="detail-value">${node.role}</span></div>${node.team ? `<div class="detail-item"><span class="detail-label">Departamento</span><span class="detail-value">${node.team}</span></div>` : ''}</div></div>` : ''}
                 `;
-                sections[dept].appendChild(pos);
 
-                if (node.children) {
-                    node.children.forEach(child => addToList(child, dept, localDepth + 1, node.vacant ? parentName : node.name));
+                const wrapper = document.createElement('div');
+                wrapper.className = 'list-node';
+                wrapper.appendChild(pos);
+
+                if (hasChildren) {
+                    const childrenGroup = document.createElement('div');
+                    childrenGroup.className = 'list-children';
+                    node.children.forEach(child => {
+                        const childWrapper = buildListNode(child, dept, localDepth + 1, node.vacant ? parentName : node.name);
+                        if (childWrapper) childrenGroup.appendChild(childWrapper);
+                    });
+                    wrapper.appendChild(childrenGroup);
                 }
+
+                if (isNewSection) {
+                    sections[dept].appendChild(wrapper);
+                    return null;
+                }
+                return wrapper;
             }
 
-            addToList(ORG_DATA);
+            buildListNode(ORG_DATA);
         }
 
         // Actualizar estadísticas
@@ -1530,13 +1504,13 @@
         });
 
         // Togles
-        function togglePos(el) {
-            const details = el.nextElementSibling;
-            if (details) {
-                details.classList.toggle('expanded');
-                const icon = el.querySelector('.position-expand');
-                if (icon) icon.classList.toggle('expanded');
-            }
+        function togglePos(headerEl) {
+            const listNode = headerEl.closest('.list-node');
+            const childrenGroup = listNode ? listNode.querySelector(':scope > .list-children') : null;
+            if (!childrenGroup) return;
+            childrenGroup.classList.toggle('collapsed');
+            const icon = headerEl.querySelector('.position-expand');
+            if (icon) icon.classList.toggle('expanded');
         }
 
         function toggleDept(el) {
@@ -1559,12 +1533,25 @@
 
         function revealListRow(pos) {
             const section = pos.closest('.department-section');
-            if (!section) return;
-            const content = section.querySelector('.dept-content');
-            const icon = section.querySelector('.toggle-icon');
-            if (content && content.classList.contains('collapsed')) {
-                content.classList.remove('collapsed');
-                if (icon) icon.classList.remove('collapsed');
+            if (section) {
+                const content = section.querySelector('.dept-content');
+                const icon = section.querySelector('.toggle-icon');
+                if (content && content.classList.contains('collapsed')) {
+                    content.classList.remove('collapsed');
+                    if (icon) icon.classList.remove('collapsed');
+                }
+            }
+            // Expandir todos los grupos de subordinados ancestros hasta llegar a la raíz
+            let current = pos.closest('.list-node');
+            while (current && current.parentElement && current.parentElement.classList.contains('list-children')) {
+                const childrenGroup = current.parentElement;
+                childrenGroup.classList.remove('collapsed');
+                const parentListNode = childrenGroup.closest('.list-node');
+                if (parentListNode) {
+                    const expandIcon = parentListNode.querySelector(':scope > .org-position .position-expand');
+                    if (expandIcon) expandIcon.classList.add('expanded');
+                }
+                current = parentListNode;
             }
         }
 
@@ -1647,9 +1634,11 @@
                     el.classList.remove('collapsed');
                     el.previousElementSibling.querySelector('.toggle-icon').classList.remove('collapsed');
                 });
-                document.querySelectorAll('.position-details').forEach(el => {
-                    el.classList.add('expanded');
-                    el.previousElementSibling.querySelector('.position-expand').classList.add('expanded');
+                document.querySelectorAll('.list-children.collapsed').forEach(el => {
+                    el.classList.remove('collapsed');
+                    const listNode = el.closest('.list-node');
+                    const icon = listNode ? listNode.querySelector(':scope > .org-position .position-expand') : null;
+                    if (icon) icon.classList.add('expanded');
                 });
                 // Vista Organigrama
                 document.querySelectorAll('#orgTreeRoot li.node-collapsed').forEach(el => {
@@ -1665,11 +1654,11 @@
                     el.classList.add('collapsed');
                     el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
                 });
-                document.querySelectorAll('.position-details.expanded').forEach(el => {
-                    el.classList.remove('expanded');
-                    if (el.previousElementSibling && el.previousElementSibling.querySelector('.position-expand')) {
-                        el.previousElementSibling.querySelector('.position-expand').classList.remove('expanded');
-                    }
+                document.querySelectorAll('.list-children:not(.collapsed)').forEach(el => {
+                    el.classList.add('collapsed');
+                    const listNode = el.closest('.list-node');
+                    const icon = listNode ? listNode.querySelector(':scope > .org-position .position-expand') : null;
+                    if (icon) icon.classList.remove('expanded');
                 });
                 // Vista Organigrama
                 document.querySelectorAll('#orgTreeRoot li.has-children:not(.node-collapsed)').forEach(el => {
@@ -1678,13 +1667,14 @@
             });
         }
 
-        // Por defecto, contraer todos los departamentos
+        // Por defecto, contraer todos los departamentos y todos los grupos de subordinados
         document.querySelectorAll('.dept-content').forEach(el => {
             el.classList.add('collapsed');
             if (el.previousElementSibling) {
                 el.previousElementSibling.querySelector('.toggle-icon').classList.add('collapsed');
             }
         });
+        document.querySelectorAll('.list-children').forEach(el => el.classList.add('collapsed'));
 
         // ---- Configuración discreta: engranaje protegido con PIN ----
         const settingsGearBtn = document.getElementById('settingsGearBtn');
