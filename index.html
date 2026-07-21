@@ -1167,6 +1167,7 @@
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
+            <button class="settings-menu-item reset-item" id="exitEditModeBtn" style="display:none;">🔒 Salir del modo edición</button>
         </div>
         <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
         <input type="file" id="photoUploadInput" accept="image/*" style="display:none;">
@@ -2028,6 +2029,7 @@
         const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
         const photoEditNotice = document.getElementById('photoEditNotice');
+        const exitEditModeBtn = document.getElementById('exitEditModeBtn');
         let settingsUnlocked = false;
         let pendingPhotoPerson = null;
 
@@ -2051,6 +2053,19 @@
         function activateEditMode() {
             document.body.classList.add('edit-mode');
             if (photoEditNotice) photoEditNotice.style.display = 'block';
+            if (exitEditModeBtn) exitEditModeBtn.style.display = '';
+        }
+
+        function deactivateEditMode() {
+            settingsUnlocked = false;
+            document.body.classList.remove('edit-mode');
+            if (photoEditNotice) photoEditNotice.style.display = 'none';
+            if (exitEditModeBtn) exitEditModeBtn.style.display = 'none';
+            closeSettingsMenu();
+        }
+
+        if (exitEditModeBtn) {
+            exitEditModeBtn.addEventListener('click', deactivateEditMode);
         }
 
         if (settingsGearBtn) {
