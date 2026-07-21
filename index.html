@@ -1155,7 +1155,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: haz clic en cualquier foto para subir una nueva, o en 🙌 Reconocer para darle un reconocimiento a alguien.
+                🖊 Modo edición activo: haz clic (izquierdo o derecho) en cualquier foto para subir una nueva, o en 🙌 Reconocer para darle un reconocimiento a alguien.
             </div>
         </div>
 
@@ -2084,14 +2084,28 @@
             }
         });
 
-        // Clic en una foto (solo activo tras desbloquear con el PIN) -> subir imagen para esa persona
+        // Clic (izquierdo o derecho) en una foto, solo activo tras desbloquear con el PIN -> subir imagen para esa persona
+        function startPhotoUpload(personName) {
+            if (!photoUploadInput || !personName) return;
+            pendingPhotoPerson = personName;
+            photoUploadInput.click();
+        }
+
         document.addEventListener('click', (e) => {
             if (!settingsUnlocked) return;
             const photoEl = e.target.closest('.org-photo[data-person]');
-            if (!photoEl || !photoUploadInput) return;
+            if (!photoEl) return;
             e.stopPropagation();
-            pendingPhotoPerson = photoEl.getAttribute('data-person');
-            photoUploadInput.click();
+            startPhotoUpload(photoEl.getAttribute('data-person'));
+        });
+
+        document.addEventListener('contextmenu', (e) => {
+            if (!settingsUnlocked) return;
+            const photoEl = e.target.closest('.org-photo[data-person]');
+            if (!photoEl) return;
+            e.preventDefault();
+            e.stopPropagation();
+            startPhotoUpload(photoEl.getAttribute('data-person'));
         });
 
         if (photoUploadInput) {
