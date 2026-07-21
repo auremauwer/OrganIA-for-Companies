@@ -948,6 +948,21 @@
             margin-bottom: 20px;
         }
 
+        .photo-edit-notice {
+            background: #e8f0fe;
+            color: #1e3c72;
+            border-color: #b7cdfb;
+        }
+
+        body.photo-edit-mode .org-photo[data-person] {
+            cursor: pointer;
+            transition: box-shadow 0.15s ease;
+        }
+
+        body.photo-edit-mode .org-photo[data-person]:hover {
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.45);
+        }
+
         .hidden-item {
             display: none;
         }
@@ -1004,15 +1019,20 @@
             <div id="customDataNotice" class="custom-data-notice" style="display:none;">
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
+            <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
+                🖊 Modo edición activo: haz clic en cualquier foto para subir una nueva.
+            </div>
         </div>
 
         <button id="settingsGearBtn" class="settings-gear-btn" title="Configuración" aria-label="Configuración">⚙</button>
         <div id="settingsMenu" class="settings-menu" style="display:none;">
             <button class="settings-menu-item" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
             <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
+            <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
         </div>
         <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
+        <input type="file" id="photoUploadInput" accept="image/*" style="display:none;">
     </header>
 
     <main>
@@ -1280,6 +1300,23 @@
             console.error('No se pudo cargar la organización guardada, se usan los datos por defecto.', e);
         }
 
+        // Fotos subidas manualmente por persona (independiente de si los datos son propios o de ejemplo)
+        const PHOTO_OVERRIDES_KEY = 'organia_photo_overrides';
+        let photoOverrides = {};
+        try {
+            photoOverrides = JSON.parse(localStorage.getItem(PHOTO_OVERRIDES_KEY) || '{}');
+        } catch (e) {
+            photoOverrides = {};
+        }
+
+        function applyPhotoOverrides(node) {
+            if (node.name && photoOverrides[node.name]) {
+                node.photo = photoOverrides[node.name];
+            }
+            if (node.children) node.children.forEach(applyPhotoOverrides);
+        }
+        applyPhotoOverrides(ORG_DATA);
+
         // Funciones auxiliares
         function countEmployees(node) {
             let count = node.vacant ? 0 : 1;
@@ -1300,15 +1337,20 @@
         const SILHOUETTE_SVG = '<svg viewBox="0 0 24 24" width="60%" height="60%" fill="#9aa5b8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.418 3.582-8 8-8s8 3.582 8 8v1H4v-1z"/></svg>';
         const VACANT_SVG = '<svg viewBox="0 0 24 24" width="50%" height="50%" fill="none" stroke="#9aa5b8" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
+        function escapeAttr(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        }
+
         function avatarHtml(node, extraClass) {
             const cls = 'org-photo' + (extraClass ? ' ' + extraClass : '');
             if (node.vacant) {
                 return `<div class="${cls} vacant-photo">${VACANT_SVG}</div>`;
             }
+            const personAttr = node.name ? ` data-person="${escapeAttr(node.name)}"` : '';
             if (node.photo) {
-                return `<div class="${cls}"><img src="${node.photo}" alt="${node.name}"></div>`;
+                return `<div class="${cls}"${personAttr}><img src="${node.photo}" alt="${escapeAttr(node.name)}"></div>`;
             }
-            return `<div class="${cls}">${SILHOUETTE_SVG}</div>`;
+            return `<div class="${cls}"${personAttr}>${SILHOUETTE_SVG}</div>`;
         }
 
         function buildTreeNode(node, depth = 0) {
@@ -1637,17 +1679,30 @@
         const downloadExampleBtn = document.getElementById('downloadExampleBtn');
         const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
+        const resetPhotosBtn = document.getElementById('resetPhotosBtn');
         const jsonFileInput = document.getElementById('jsonFileInput');
+        const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
+        const photoEditNotice = document.getElementById('photoEditNotice');
         let settingsUnlocked = false;
+        let pendingPhotoPerson = null;
 
         if (usingCustomData) {
             if (resetOrgBtn) resetOrgBtn.style.display = '';
             if (customDataNotice) customDataNotice.style.display = 'block';
         }
 
+        if (resetPhotosBtn && Object.keys(photoOverrides).length > 0) {
+            resetPhotosBtn.style.display = '';
+        }
+
         function closeSettingsMenu() {
             if (settingsMenu) settingsMenu.style.display = 'none';
+        }
+
+        function activatePhotoEditMode() {
+            document.body.classList.add('photo-edit-mode');
+            if (photoEditNotice) photoEditNotice.style.display = 'block';
         }
 
         if (settingsGearBtn) {
@@ -1665,6 +1720,7 @@
                         return;
                     }
                     settingsUnlocked = true;
+                    activatePhotoEditMode();
                 }
                 settingsMenu.style.display = 'flex';
             });
@@ -1676,6 +1732,48 @@
                 closeSettingsMenu();
             }
         });
+
+        // Clic en una foto (solo activo tras desbloquear con el PIN) -> subir imagen para esa persona
+        document.addEventListener('click', (e) => {
+            if (!settingsUnlocked) return;
+            const photoEl = e.target.closest('.org-photo[data-person]');
+            if (!photoEl || !photoUploadInput) return;
+            e.stopPropagation();
+            pendingPhotoPerson = photoEl.getAttribute('data-person');
+            photoUploadInput.click();
+        });
+
+        if (photoUploadInput) {
+            photoUploadInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file || !pendingPhotoPerson) return;
+                if (!file.type.startsWith('image/')) {
+                    alert('Selecciona un archivo de imagen (JPG, PNG, etc.).');
+                    photoUploadInput.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    photoOverrides[pendingPhotoPerson] = evt.target.result;
+                    localStorage.setItem(PHOTO_OVERRIDES_KEY, JSON.stringify(photoOverrides));
+                    location.reload();
+                };
+                reader.onerror = function() {
+                    alert('No se pudo leer la imagen.');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        if (resetPhotosBtn) {
+            resetPhotosBtn.addEventListener('click', () => {
+                closeSettingsMenu();
+                if (confirm('¿Quitar todas las fotos que subiste manualmente y volver a las siluetas / fotos originales?')) {
+                    localStorage.removeItem(PHOTO_OVERRIDES_KEY);
+                    location.reload();
+                }
+            });
+        }
 
         if (downloadExampleBtn) {
             downloadExampleBtn.addEventListener('click', () => {
