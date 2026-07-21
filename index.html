@@ -959,13 +959,52 @@
             border-color: #b7cdfb;
         }
 
-        body.photo-edit-mode .org-photo[data-person] {
+        body.edit-mode .org-photo[data-person] {
             cursor: pointer;
             transition: box-shadow 0.15s ease;
         }
 
-        body.photo-edit-mode .org-photo[data-person]:hover {
+        body.edit-mode .org-photo[data-person]:hover {
             box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.45);
+        }
+
+        .give-recognition-btn {
+            display: none;
+            background: #eef1f7;
+            color: #2a5298;
+            border: 1px dashed #b7c4dd;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .give-recognition-btn:hover {
+            background: #dde7fb;
+        }
+
+        body.edit-mode .give-recognition-btn {
+            display: inline-block;
+        }
+
+        .recognitions-list {
+            margin-top: 6px;
+        }
+
+        .recognition-item {
+            font-size: 0.72rem;
+            color: #4a4a4a;
+            background: #f6f8fb;
+            border-left: 2px solid #9aa5b8;
+            padding: 3px 7px;
+            margin-top: 3px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .recognition-item strong {
+            color: #1e3c72;
         }
 
         .hidden-item {
@@ -1025,7 +1064,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: haz clic en cualquier foto para subir una nueva.
+                🖊 Modo edición activo: haz clic en cualquier foto para subir una nueva, o en 🙌 Reconocer para darle un reconocimiento a alguien.
             </div>
         </div>
 
@@ -1035,6 +1074,7 @@
             <button class="settings-menu-item" id="downloadCurrentBtn">⬇ Descargar mi organización actual (con fotos)</button>
             <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
+            <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
         </div>
         <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
@@ -1328,6 +1368,24 @@
         }
         applyPhotoOverrides(ORG_DATA);
 
+        // Reconocimientos entre compañeros (quién lo dio + en qué ayudó), agregados desde el modo edición
+        const RECOGNITION_OVERRIDES_KEY = 'organia_recognition_overrides';
+        let recognitionOverrides = {};
+        try {
+            recognitionOverrides = JSON.parse(localStorage.getItem(RECOGNITION_OVERRIDES_KEY) || '{}');
+        } catch (e) {
+            recognitionOverrides = {};
+        }
+
+        function applyRecognitionOverrides(node) {
+            if (node.name && recognitionOverrides[node.name] && recognitionOverrides[node.name].length) {
+                const existing = Array.isArray(node.recognitions) ? node.recognitions : [];
+                node.recognitions = existing.concat(recognitionOverrides[node.name]);
+            }
+            if (node.children) node.children.forEach(applyRecognitionOverrides);
+        }
+        applyRecognitionOverrides(ORG_DATA);
+
         // Funciones auxiliares
         function countEmployees(node) {
             let count = node.vacant ? 0 : 1;
@@ -1350,6 +1408,27 @@
 
         function escapeAttr(str) {
             return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function recognitionsHtml(node) {
+            if (!node.recognitions || !node.recognitions.length) return '';
+            return `<div class="recognitions-list">${node.recognitions.map(r =>
+                `<div class="recognition-item">🙌 <strong>${escapeHtml(r.from)}</strong>: ${escapeHtml(r.message)}</div>`
+            ).join('')}</div>`;
+        }
+
+        function giveRecognitionBtnHtml(node) {
+            if (!node.name || node.vacant) return '';
+            return `<button type="button" class="give-recognition-btn" data-person="${escapeAttr(node.name)}" onclick="giveRecognitionClick(event, this)">🙌 Reconocer</button>`;
         }
 
         function avatarHtml(node, extraClass) {
@@ -1396,7 +1475,9 @@
                         </div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
                         ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
+                        ${recognitionsHtml(node)}
                         ${badge}
+                        ${giveRecognitionBtnHtml(node)}
                     </div>
                 </div>
             `;
@@ -1472,7 +1553,9 @@
                                     <div class="person-role">${node.role}</div>
                                     ${parentName ? `<div class="reports-to">↳ Reporta a: ${parentName}</div>` : ''}
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
+                                    ${recognitionsHtml(node)}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
+                                    ${giveRecognitionBtnHtml(node)}
                                 </div>
                             </div>
                         </div>
@@ -1573,6 +1656,25 @@
 
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
+
+        function giveRecognitionClick(event, btn) {
+            event.stopPropagation();
+            if (!settingsUnlocked) return;
+            const personName = btn.getAttribute('data-person');
+            const from = window.prompt('¿Quién da este reconocimiento? (tu nombre)');
+            if (!from || !from.trim()) return;
+            const message = window.prompt(`¿En qué te ayudó ${personName}? (motivo del reconocimiento)`);
+            if (!message || !message.trim()) return;
+            if (!recognitionOverrides[personName]) recognitionOverrides[personName] = [];
+            recognitionOverrides[personName].push({
+                from: from.trim(),
+                message: message.trim(),
+                date: new Date().toISOString().slice(0, 10)
+            });
+            localStorage.setItem(RECOGNITION_OVERRIDES_KEY, JSON.stringify(recognitionOverrides));
+            location.reload();
+        }
+        window.giveRecognitionClick = giveRecognitionClick;
 
         // Búsqueda y Filtrado
         const searchInput = document.getElementById('searchInput');
@@ -1739,6 +1841,7 @@
         const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
+        const resetRecognitionsBtn = document.getElementById('resetRecognitionsBtn');
         const jsonFileInput = document.getElementById('jsonFileInput');
         const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
@@ -1755,12 +1858,16 @@
             resetPhotosBtn.style.display = '';
         }
 
+        if (resetRecognitionsBtn && Object.keys(recognitionOverrides).length > 0) {
+            resetRecognitionsBtn.style.display = '';
+        }
+
         function closeSettingsMenu() {
             if (settingsMenu) settingsMenu.style.display = 'none';
         }
 
-        function activatePhotoEditMode() {
-            document.body.classList.add('photo-edit-mode');
+        function activateEditMode() {
+            document.body.classList.add('edit-mode');
             if (photoEditNotice) photoEditNotice.style.display = 'block';
         }
 
@@ -1779,7 +1886,7 @@
                         return;
                     }
                     settingsUnlocked = true;
-                    activatePhotoEditMode();
+                    activateEditMode();
                 }
                 settingsMenu.style.display = 'flex';
             });
@@ -1829,6 +1936,16 @@
                 closeSettingsMenu();
                 if (confirm('¿Quitar todas las fotos que subiste manualmente y volver a las siluetas / fotos originales?')) {
                     localStorage.removeItem(PHOTO_OVERRIDES_KEY);
+                    location.reload();
+                }
+            });
+        }
+
+        if (resetRecognitionsBtn) {
+            resetRecognitionsBtn.addEventListener('click', () => {
+                closeSettingsMenu();
+                if (confirm('¿Quitar todos los reconocimientos que se agregaron manualmente?')) {
+                    localStorage.removeItem(RECOGNITION_OVERRIDES_KEY);
                     location.reload();
                 }
             });
