@@ -1027,6 +1027,7 @@
         <button id="settingsGearBtn" class="settings-gear-btn" title="Configuración" aria-label="Configuración">⚙</button>
         <div id="settingsMenu" class="settings-menu" style="display:none;">
             <button class="settings-menu-item" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
+            <button class="settings-menu-item" id="downloadCurrentBtn">⬇ Descargar mi organización actual (con fotos)</button>
             <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
@@ -1677,6 +1678,7 @@
         const settingsGearBtn = document.getElementById('settingsGearBtn');
         const settingsMenu = document.getElementById('settingsMenu');
         const downloadExampleBtn = document.getElementById('downloadExampleBtn');
+        const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
         const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
@@ -1782,6 +1784,23 @@
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'organia-ejemplo.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                closeSettingsMenu();
+            });
+        }
+
+        // Descarga la organización TAL COMO se ve ahora mismo (default o subida, con fotos incluidas)
+        // para poder pedirle a alguien con acceso al repositorio que la publique de forma permanente.
+        if (downloadCurrentBtn) {
+            downloadCurrentBtn.addEventListener('click', () => {
+                const blob = new Blob([JSON.stringify(ORG_DATA, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'organia-mi-organizacion.json';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
