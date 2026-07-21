@@ -27,15 +27,15 @@
 
         .settings-gear-btn {
             position: absolute;
-            top: 14px;
-            right: 16px;
-            width: 26px;
-            height: 26px;
+            top: 10px;
+            right: 12px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: rgba(255,255,255,0.12);
             border: 1px solid rgba(255,255,255,0.2);
             color: rgba(255,255,255,0.65);
-            font-size: 0.85rem;
+            font-size: 1.05rem;
             line-height: 1;
             cursor: pointer;
             display: flex;
@@ -51,8 +51,8 @@
 
         .settings-menu {
             position: absolute;
-            top: 46px;
-            right: 16px;
+            top: 50px;
+            right: 12px;
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -959,6 +959,97 @@
             border-color: #b7cdfb;
         }
 
+        /* Modal propio: reemplaza prompt()/alert()/confirm() nativos, que algunos
+           navegadores integrados (WebViews de apps de redes sociales, etc.) bloquean en silencio. */
+        .app-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 25, 40, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+            padding: 20px;
+        }
+
+        .app-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        }
+
+        .app-modal-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #1e3c72;
+            margin-bottom: 12px;
+        }
+
+        .app-modal-message {
+            font-size: 0.9rem;
+            color: #2c3e50;
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+
+        .app-modal-field {
+            margin-bottom: 12px;
+        }
+
+        .app-modal-field label {
+            display: block;
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .app-modal-field input,
+        .app-modal-field textarea {
+            width: 100%;
+            padding: 9px 11px;
+            border: 2px solid #e5e9f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .app-modal-field input:focus,
+        .app-modal-field textarea:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+
+        .app-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .app-modal-btn {
+            padding: 9px 18px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .app-modal-btn.cancel {
+            background: #eef1f7;
+            color: #64748b;
+        }
+
+        .app-modal-btn.confirm {
+            background: #2a5298;
+            color: white;
+        }
+
         body.edit-mode .org-photo[data-person] {
             cursor: pointer;
             transition: box-shadow 0.15s ease;
@@ -1080,6 +1171,18 @@
         <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
         <input type="file" id="photoUploadInput" accept="image/*" style="display:none;">
     </header>
+
+    <div id="appModal" class="app-modal-overlay" style="display:none;">
+        <div class="app-modal">
+            <div class="app-modal-title" id="appModalTitle" style="display:none;"></div>
+            <div class="app-modal-message" id="appModalMessage" style="display:none;"></div>
+            <div id="appModalFields"></div>
+            <div class="app-modal-actions">
+                <button type="button" class="app-modal-btn cancel" id="appModalCancel">Cancelar</button>
+                <button type="button" class="app-modal-btn confirm" id="appModalConfirm">Aceptar</button>
+            </div>
+        </div>
+    </div>
 
     <main>
         <div class="container">
@@ -1419,6 +1522,83 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // ---- Modal propio (reemplaza prompt/alert/confirm nativos) ----
+        function showModal({ title, message, fields, confirmText = 'Aceptar', cancelText = 'Cancelar', showCancel = true }) {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('appModal');
+                const titleEl = document.getElementById('appModalTitle');
+                const messageEl = document.getElementById('appModalMessage');
+                const fieldsEl = document.getElementById('appModalFields');
+                const cancelBtn = document.getElementById('appModalCancel');
+                const confirmBtn = document.getElementById('appModalConfirm');
+
+                titleEl.textContent = title || '';
+                titleEl.style.display = title ? 'block' : 'none';
+                messageEl.textContent = message || '';
+                messageEl.style.display = message ? 'block' : 'none';
+                fieldsEl.innerHTML = '';
+                cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+                confirmBtn.textContent = confirmText;
+                cancelBtn.textContent = cancelText;
+
+                const isPrompt = fields && fields.length > 0;
+                const inputs = (fields || []).map(f => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'app-modal-field';
+                    const label = document.createElement('label');
+                    label.textContent = f.label;
+                    const input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+                    if (f.type !== 'textarea') input.type = 'text';
+                    else input.rows = 3;
+                    wrap.appendChild(label);
+                    wrap.appendChild(input);
+                    fieldsEl.appendChild(wrap);
+                    return input;
+                });
+
+                function cleanup(result) {
+                    overlay.style.display = 'none';
+                    cancelBtn.removeEventListener('click', onCancel);
+                    confirmBtn.removeEventListener('click', onConfirm);
+                    document.removeEventListener('keydown', onKeydown);
+                    resolve(result);
+                }
+                function onCancel() { cleanup(isPrompt ? null : false); }
+                function onConfirm() {
+                    if (isPrompt) {
+                        const values = inputs.map(inp => inp.value.trim());
+                        if (values.some(v => !v)) return;
+                        cleanup(values);
+                    } else {
+                        cleanup(true);
+                    }
+                }
+                function onKeydown(e) {
+                    if (e.key === 'Escape') onCancel();
+                    if (e.key === 'Enter' && inputs.length <= 1) onConfirm();
+                }
+
+                cancelBtn.addEventListener('click', onCancel);
+                confirmBtn.addEventListener('click', onConfirm);
+                document.addEventListener('keydown', onKeydown);
+
+                overlay.style.display = 'flex';
+                setTimeout(() => { if (inputs[0]) inputs[0].focus(); }, 50);
+            });
+        }
+
+        function showAlertModal(message) {
+            return showModal({ message, showCancel: false, confirmText: 'Entendido' });
+        }
+
+        function showConfirmModal(message) {
+            return showModal({ message, confirmText: 'Sí', cancelText: 'Cancelar' });
+        }
+
+        function showPromptModal(title, fields) {
+            return showModal({ title, fields });
+        }
+
         function recognitionsHtml(node) {
             if (!node.recognitions || !node.recognitions.length) return '';
             return `<div class="recognitions-list">${node.recognitions.map(r =>
@@ -1657,18 +1837,20 @@
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
 
-        function giveRecognitionClick(event, btn) {
+        async function giveRecognitionClick(event, btn) {
             event.stopPropagation();
             if (!settingsUnlocked) return;
             const personName = btn.getAttribute('data-person');
-            const from = window.prompt('¿Quién da este reconocimiento? (tu nombre)');
-            if (!from || !from.trim()) return;
-            const message = window.prompt(`¿En qué te ayudó ${personName}? (motivo del reconocimiento)`);
-            if (!message || !message.trim()) return;
+            const result = await showPromptModal(`Reconocer a ${personName}`, [
+                { label: '¿Quién da este reconocimiento? (tu nombre)', type: 'text' },
+                { label: `¿En qué te ayudó ${personName}?`, type: 'textarea' }
+            ]);
+            if (!result) return;
+            const [from, message] = result;
             if (!recognitionOverrides[personName]) recognitionOverrides[personName] = [];
             recognitionOverrides[personName].push({
-                from: from.trim(),
-                message: message.trim(),
+                from: from,
+                message: message,
                 date: new Date().toISOString().slice(0, 10)
             });
             localStorage.setItem(RECOGNITION_OVERRIDES_KEY, JSON.stringify(recognitionOverrides));
@@ -1872,17 +2054,20 @@
         }
 
         if (settingsGearBtn) {
-            settingsGearBtn.addEventListener('click', (e) => {
+            settingsGearBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 if (settingsMenu.style.display === 'flex') {
                     closeSettingsMenu();
                     return;
                 }
                 if (!settingsUnlocked) {
-                    const pin = window.prompt('Ingresa el PIN de configuración:');
-                    if (pin === null) return;
+                    const result = await showPromptModal('Configuración protegida', [
+                        { label: 'Ingresa el PIN', type: 'text' }
+                    ]);
+                    if (!result) return;
+                    const pin = result[0];
                     if (pin !== UPLOAD_PIN) {
-                        alert('PIN incorrecto.');
+                        await showAlertModal('PIN incorrecto.');
                         return;
                     }
                     settingsUnlocked = true;
@@ -1910,11 +2095,11 @@
         });
 
         if (photoUploadInput) {
-            photoUploadInput.addEventListener('change', function(e) {
+            photoUploadInput.addEventListener('change', async function(e) {
                 const file = e.target.files[0];
                 if (!file || !pendingPhotoPerson) return;
                 if (!file.type.startsWith('image/')) {
-                    alert('Selecciona un archivo de imagen (JPG, PNG, etc.).');
+                    await showAlertModal('Selecciona un archivo de imagen (JPG, PNG, etc.).');
                     photoUploadInput.value = '';
                     return;
                 }
@@ -1924,17 +2109,17 @@
                     localStorage.setItem(PHOTO_OVERRIDES_KEY, JSON.stringify(photoOverrides));
                     location.reload();
                 };
-                reader.onerror = function() {
-                    alert('No se pudo leer la imagen.');
+                reader.onerror = async function() {
+                    await showAlertModal('No se pudo leer la imagen.');
                 };
                 reader.readAsDataURL(file);
             });
         }
 
         if (resetPhotosBtn) {
-            resetPhotosBtn.addEventListener('click', () => {
+            resetPhotosBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
-                if (confirm('¿Quitar todas las fotos que subiste manualmente y volver a las siluetas / fotos originales?')) {
+                if (await showConfirmModal('¿Quitar todas las fotos que subiste manualmente y volver a las siluetas / fotos originales?')) {
                     localStorage.removeItem(PHOTO_OVERRIDES_KEY);
                     location.reload();
                 }
@@ -1942,9 +2127,9 @@
         }
 
         if (resetRecognitionsBtn) {
-            resetRecognitionsBtn.addEventListener('click', () => {
+            resetRecognitionsBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
-                if (confirm('¿Quitar todos los reconocimientos que se agregaron manualmente?')) {
+                if (await showConfirmModal('¿Quitar todos los reconocimientos que se agregaron manualmente?')) {
                     localStorage.removeItem(RECOGNITION_OVERRIDES_KEY);
                     location.reload();
                 }
@@ -2003,36 +2188,36 @@
                 if (!file) return;
 
                 const reader = new FileReader();
-                reader.onload = function(evt) {
+                reader.onload = async function(evt) {
                     let parsed;
                     try {
                         parsed = JSON.parse(evt.target.result);
                     } catch (err) {
-                        alert('El archivo no es un JSON válido: ' + err.message);
+                        await showAlertModal('El archivo no es un JSON válido: ' + err.message);
                         jsonFileInput.value = '';
                         return;
                     }
                     const error = validateOrgNode(parsed);
                     if (error) {
-                        alert('El JSON no tiene el formato esperado.\n' + error);
+                        await showAlertModal('El JSON no tiene el formato esperado.\n' + error);
                         jsonFileInput.value = '';
                         return;
                     }
                     localStorage.setItem(CUSTOM_DATA_KEY, JSON.stringify(parsed));
-                    alert('¡Organización actualizada! La página se va a recargar.');
+                    await showAlertModal('¡Organización actualizada! La página se va a recargar.');
                     location.reload();
                 };
-                reader.onerror = function() {
-                    alert('No se pudo leer el archivo.');
+                reader.onerror = async function() {
+                    await showAlertModal('No se pudo leer el archivo.');
                 };
                 reader.readAsText(file);
             });
         }
 
         if (resetOrgBtn) {
-            resetOrgBtn.addEventListener('click', () => {
+            resetOrgBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
-                if (confirm('¿Restablecer la organización original y descartar tu JSON cargado?')) {
+                if (await showConfirmModal('¿Restablecer la organización original y descartar tu JSON cargado?')) {
                     localStorage.removeItem(CUSTOM_DATA_KEY);
                     location.reload();
                 }
