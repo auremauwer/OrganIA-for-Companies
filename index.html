@@ -235,6 +235,13 @@
             margin-top: 6px;
         }
 
+        .reports-to {
+            font-size: 0.75rem;
+            color: #9aa5b8;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+
         .position-header {
             padding: 16px;
             display: flex;
@@ -1411,11 +1418,12 @@
             container.innerHTML = '';
             const sections = {};
 
-            function addToList(node, parentDept = null) {
+            function addToList(node, parentDept = null, depth = 0, parentName = null) {
                 const dept = node.team || parentDept;
                 if (!dept) return;
 
-                if (!sections[dept]) {
+                const isNewSection = !sections[dept];
+                if (isNewSection) {
                     const section = document.createElement('div');
                     section.className = 'department-section';
                     section.innerHTML = `
@@ -1430,6 +1438,8 @@
                     container.appendChild(section);
                     sections[dept] = section.querySelector('.hierarchy');
                 }
+                // La profundidad se reinicia al entrar a un nuevo departamento (el Chief es la raíz visual de su sección)
+                const localDepth = isNewSection ? 0 : depth;
 
                 const hasChildren = node.children && node.children.length > 0;
                 const directChildren = node.children ? node.children.length : 0;
@@ -1442,6 +1452,7 @@
                 const pos = document.createElement('div');
                 pos.className = 'org-position' + (node.vacant ? ' vacant-row' : '') + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition ' + badgeTypeClass : '');
                 pos.style.setProperty('--row-accent', accent);
+                pos.style.marginLeft = (localDepth * 28) + 'px';
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
                         <div class="position-info">
@@ -1453,6 +1464,7 @@
                                         ${node.vacant ? `<span class="vacant-tag">💼 Vacante</span> <span class="vacant-name">Posición vacante</span>` : `${node.name}${node.badge ? `<span class="list-recognition-badge ${badgeTypeClass}">${badgeIcon} ${node.badge}${node.badgePeriod ? ` <span class="badge-period">· ${node.badgePeriod}</span>` : ''}</span>` : ''}`}
                                     </div>
                                     <div class="person-role">${node.role}</div>
+                                    ${parentName ? `<div class="reports-to">↳ Reporta a: ${parentName}</div>` : ''}
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
                                 </div>
@@ -1465,7 +1477,7 @@
                 sections[dept].appendChild(pos);
 
                 if (node.children) {
-                    node.children.forEach(child => addToList(child, dept));
+                    node.children.forEach(child => addToList(child, dept, localDepth + 1, node.vacant ? parentName : node.name));
                 }
             }
 
