@@ -412,6 +412,46 @@
             padding: 50px 30px;
         }
 
+        .tree-minimap {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 170px;
+            height: 120px;
+            background: rgba(255,255,255,0.97);
+            border: 1px solid #d3d8e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+            overflow: hidden;
+            z-index: 40;
+            padding: 5px;
+            box-sizing: content-box;
+        }
+
+        .minimap-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .minimap-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 1px;
+            transform: translate(-50%, -50%);
+        }
+
+        .minimap-viewport {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: 2px solid #2a5298;
+            background: rgba(42, 82, 152, 0.15);
+            pointer-events: none;
+            border-radius: 2px;
+        }
+
         .org-tree,
         .org-tree ul {
             list-style: none;
@@ -1043,6 +1083,11 @@
                 </div>
             </div>
 
+            <div id="treeMinimap" class="tree-minimap" style="display:none;">
+                <div id="minimapContent" class="minimap-content"></div>
+                <div id="minimapViewport" class="minimap-viewport"></div>
+            </div>
+
             <!-- Vista Acerca De -->
             <div id="aboutView" style="display:none">
                 <div class="about-section">
@@ -1365,6 +1410,7 @@
                 li.querySelector('.org-card').addEventListener('click', function(e) {
                     e.stopPropagation();
                     li.classList.toggle('node-collapsed');
+                    refreshMinimap();
                 });
             }
 
@@ -1495,6 +1541,12 @@
                 document.getElementById('chartView').style.display = view === 'chart' ? 'block' : 'none';
                 document.getElementById('aboutView').style.display = view === 'about' ? 'block' : 'none';
 
+                const minimap = document.getElementById('treeMinimap');
+                if (minimap) {
+                    minimap.style.display = view === 'chart' ? 'block' : 'none';
+                    if (view === 'chart') refreshMinimap();
+                }
+
                 // Si hay una búsqueda activa, re-aplicarla para resaltar en la vista recién mostrada
                 const searchBox = document.getElementById('searchInput');
                 if (searchBox && searchBox.value.trim() !== '') {
@@ -1624,6 +1676,7 @@
                     const target = treeNameMatch || treeAnyMatch;
                     if (target) flashHighlight(target);
                 }
+                if (chartVisible) refreshMinimap();
             });
         }
 
@@ -1644,6 +1697,7 @@
                 document.querySelectorAll('#orgTreeRoot li.node-collapsed').forEach(el => {
                     el.classList.remove('node-collapsed');
                 });
+                refreshMinimap();
             });
         }
 
@@ -1664,6 +1718,7 @@
                 document.querySelectorAll('#orgTreeRoot li.has-children:not(.node-collapsed)').forEach(el => {
                     el.classList.add('node-collapsed');
                 });
+                refreshMinimap();
             });
         }
 
@@ -1866,6 +1921,85 @@
                 }
             });
         }
+
+        // ---- Minimapa del organigrama ----
+        const MINIMAP_W = 170;
+        const MINIMAP_H = 120;
+
+        function isChartViewActive() {
+            const chartView = document.getElementById('chartView');
+            return chartView && chartView.style.display !== 'none';
+        }
+
+        function renderMinimapDots() {
+            const minimapContent = document.getElementById('minimapContent');
+            const treeRoot = document.getElementById('orgTreeRoot');
+            if (!minimapContent || !treeRoot) return;
+            minimapContent.innerHTML = '';
+
+            const rootRect = treeRoot.getBoundingClientRect();
+            const totalW = treeRoot.scrollWidth || 1;
+            const totalH = treeRoot.scrollHeight || 1;
+
+            treeRoot.querySelectorAll('.org-card').forEach(card => {
+                if (card.offsetParent === null) return; // oculto por un ancestro colapsado
+                const r = card.getBoundingClientRect();
+                const nx = (r.left - rootRect.left) / totalW;
+                const ny = (r.top - rootRect.top) / totalH;
+                const dot = document.createElement('div');
+                dot.className = 'minimap-dot';
+                dot.style.left = Math.min(MINIMAP_W, Math.max(0, nx * MINIMAP_W)) + 'px';
+                dot.style.top = Math.min(MINIMAP_H, Math.max(0, ny * MINIMAP_H)) + 'px';
+                dot.style.background = getComputedStyle(card).getPropertyValue('--accent') || '#2a5298';
+                minimapContent.appendChild(dot);
+            });
+        }
+
+        function updateMinimapViewport() {
+            const viewportEl = document.getElementById('minimapViewport');
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            if (!viewportEl || !wrapper) return;
+
+            const totalW = wrapper.scrollWidth || 1;
+            const totalH = wrapper.offsetHeight || 1;
+
+            const vx1 = wrapper.scrollLeft / totalW;
+            const vx2 = (wrapper.scrollLeft + wrapper.clientWidth) / totalW;
+
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const visTop = Math.max(0, -wrapperRect.top);
+            const visBottom = Math.min(totalH, visTop + window.innerHeight);
+            const vy1 = visTop / totalH;
+            const vy2 = visBottom / totalH;
+
+            viewportEl.style.left = Math.max(0, vx1 * MINIMAP_W) + 'px';
+            viewportEl.style.width = Math.max(4, (vx2 - vx1) * MINIMAP_W) + 'px';
+            viewportEl.style.top = Math.max(0, vy1 * MINIMAP_H) + 'px';
+            viewportEl.style.height = Math.max(4, (vy2 - vy1) * MINIMAP_H) + 'px';
+        }
+
+        function refreshMinimap() {
+            if (!isChartViewActive()) return;
+            renderMinimapDots();
+            updateMinimapViewport();
+        }
+
+        window.addEventListener('scroll', () => {
+            if (isChartViewActive()) updateMinimapViewport();
+        }, { passive: true });
+
+        window.addEventListener('resize', () => {
+            if (isChartViewActive()) updateMinimapViewport();
+        });
+
+        (function() {
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            if (wrapper) {
+                wrapper.addEventListener('scroll', () => {
+                    if (isChartViewActive()) updateMinimapViewport();
+                }, { passive: true });
+            }
+        })();
     </script>
 </body>
 </html>
