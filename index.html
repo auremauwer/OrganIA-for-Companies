@@ -1122,7 +1122,59 @@
             border-left: 2px solid #dfe4ec;
         }
 
+        /* Menú contextual (clic derecho sobre una tarjeta, en modo edición) */
+        .card-context-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: auto;          /* anula el anclaje a la derecha que trae .settings-menu */
+            min-width: 210px;
+            width: max-content;
+            max-width: 260px;
+            z-index: 400;
+        }
+
+        .context-menu-header {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 4px 10px 6px;
+            border-bottom: 1px solid #eef1f7;
+            margin-bottom: 2px;
+        }
+
+        /* Arrastrar y soltar para reasignar jefe */
+        body.edit-mode .org-card,
+        body.edit-mode .list-head {
+            cursor: grab;
+        }
+
+        .drag-source {
+            opacity: 0.4;
+        }
+
+        .drop-target-ok {
+            outline: 3px solid #27ae60 !important;
+            outline-offset: 2px;
+            border-radius: 10px;
+        }
+
+        .drop-target-bad {
+            outline: 3px solid #c0392b !important;
+            outline-offset: 2px;
+            border-radius: 10px;
+        }
+
+        .drag-hint {
+            background: #eef7f0;
+            color: #2f6b47;
+            border-color: #bfe0ca;
+        }
+
         .recognitions-list {
+
             margin-top: 6px;
         }
 
@@ -1197,7 +1249,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: usa ✏️ Editar para corregir datos, 📷 Cargar foto para cambiar la imagen, y 🙌 Reconocer para dar un reconocimiento.
+                🖊 Modo edición activo: <strong>clic derecho</strong> sobre una tarjeta abre el menú (editar, foto, reconocer, marcar vacante) y puedes <strong>arrastrar una tarjeta sobre otra</strong> para cambiarle de jefe.
             </div>
         </div>
 
@@ -1210,12 +1262,15 @@
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
             <button class="settings-menu-item" id="resetEditsBtn" style="display:none;">✏️ Deshacer correcciones de datos</button>
+            <button class="settings-menu-item" id="resetStructureBtn" style="display:none;">🔀 Deshacer cambios de estructura</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
             <button class="settings-menu-item reset-item" id="exitEditModeBtn" style="display:none;">🔒 Salir del modo edición</button>
         </div>
         <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
         <input type="file" id="photoUploadInput" accept="image/*" style="display:none;">
     </header>
+
+    <div id="cardContextMenu" class="settings-menu card-context-menu" style="display:none;"></div>
 
     <div id="appModal" class="app-modal-overlay" style="display:none;">
         <div class="app-modal">
@@ -1521,6 +1576,76 @@
         }
 
         // Correcciones de datos hechas desde el modo edición (nombre, puesto, resumen, etc.)
+        // ---- Cambios de estructura (arrastrar y soltar para reasignar jefe) ----
+        // Guardado como { "clave de la persona": "clave de su nuevo jefe" }
+        const STRUCTURE_EDITS_KEY = 'organia_structure_edits';
+        let structureEdits = loadOverrides(STRUCTURE_EDITS_KEY);
+
+        function findNodeByKeyIn(root, key) {
+            if (keyOf(root) === key) return root;
+            if (root.children) {
+                for (const c of root.children) {
+                    const f = findNodeByKeyIn(c, key);
+                    if (f) return f;
+                }
+            }
+            return null;
+        }
+
+        function findParentOf(root, key) {
+            if (!root.children) return null;
+            for (const c of root.children) {
+                if (keyOf(c) === key) return root;
+                const f = findParentOf(c, key);
+                if (f) return f;
+            }
+            return null;
+        }
+
+        function isDescendant(posibleAncestro, key) {
+            if (!posibleAncestro.children) return false;
+            return posibleAncestro.children.some(c => keyOf(c) === key || isDescendant(c, key));
+        }
+
+        // Un movimiento es válido si ambos existen, no es sobre sí mismo,
+        // y el nuevo jefe no cuelga de la persona que se mueve (evita ciclos).
+        function puedeMover(personaKey, nuevoJefeKey) {
+            if (!personaKey || !nuevoJefeKey || personaKey === nuevoJefeKey) return false;
+            const persona = findNodeByKeyIn(ORG_DATA, personaKey);
+            const nuevoJefe = findNodeByKeyIn(ORG_DATA, nuevoJefeKey);
+            if (!persona || !nuevoJefe) return false;
+            if (keyOf(ORG_DATA) === personaKey) return false;   // no se puede mover la raíz
+            if (isDescendant(persona, nuevoJefeKey)) return false;
+            return true;
+        }
+
+        function applyStructureEdits() {
+            Object.keys(structureEdits).forEach(personaKey => {
+                const nuevoJefeKey = structureEdits[personaKey];
+                if (!puedeMover(personaKey, nuevoJefeKey)) return;
+                const persona = findNodeByKeyIn(ORG_DATA, personaKey);
+                const padreActual = findParentOf(ORG_DATA, personaKey);
+                const nuevoJefe = findNodeByKeyIn(ORG_DATA, nuevoJefeKey);
+                if (!persona || !padreActual || !nuevoJefe) return;
+                if (padreActual === nuevoJefe) return;
+
+                padreActual.children = padreActual.children.filter(c => keyOf(c) !== personaKey);
+                if (!nuevoJefe.children) nuevoJefe.children = [];
+                nuevoJefe.children.push(persona);
+            });
+        }
+        applyStructureEdits();
+
+        // ---- Posiciones marcadas como vacantes desde el modo edición ----
+        const VACANT_EDITS_KEY = 'organia_vacant_edits';
+        let vacantEdits = loadOverrides(VACANT_EDITS_KEY);
+
+        function applyVacantEdits(node) {
+            const k = keyOf(node);
+            if (k && vacantEdits[k]) node.vacant = true;
+            if (node.children) node.children.forEach(applyVacantEdits);
+        }
+
         const FIELD_EDITS_KEY = 'organia_field_edits';
         let fieldEdits = loadOverrides(FIELD_EDITS_KEY);
 
@@ -1539,6 +1664,7 @@
             if (node.children) node.children.forEach(applyFieldEdits);
         }
         applyFieldEdits(ORG_DATA);
+        applyVacantEdits(ORG_DATA);
 
         // Fotos subidas manualmente por persona (independiente de si los datos son propios o de ejemplo)
         const PHOTO_OVERRIDES_KEY = 'organia_photo_overrides';
@@ -1799,7 +1925,7 @@
             }
 
             li.innerHTML = `
-                <div class="org-card ${node.vacant ? 'vacant-card' : (node.badge ? 'has-recognition ' + badgeTypeClass : '')}" style="--accent: ${accent}">
+                <div class="org-card ${node.vacant ? 'vacant-card' : (node.badge ? 'has-recognition ' + badgeTypeClass : '')}" style="--accent: ${accent}" data-node-key="${escapeAttr(keyOf(node) || '')}" draggable="false">
                     <div class="org-card-bar"></div>
                     <div class="org-card-body">
                         ${isAssistant ? '<div class="org-staff-label">Staff</div>' : ''}
@@ -1887,6 +2013,7 @@
                 const pos = document.createElement('div');
                 pos.className = 'org-position' + (node.vacant ? ' vacant-row' : '') + (isAssistant ? ' staff-row' : '') + (node.badge ? ' has-recognition ' + badgeTypeClass : '');
                 pos.style.setProperty('--row-accent', accent);
+                pos.setAttribute('data-node-key', keyOf(node) || '');
                 pos.style.marginLeft = (localDepth * 28) + 'px';
                 pos.innerHTML = `
                     <div class="position-header" onclick="togglePos(this)">
@@ -2009,10 +2136,15 @@
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
 
-        async function giveRecognitionClick(event, btn) {
+        function giveRecognitionClick(event, btn) {
             event.stopPropagation();
             if (!settingsUnlocked) return;
-            const personName = btn.getAttribute('data-person');
+            abrirReconocimiento(btn.getAttribute('data-person'));
+        }
+        window.giveRecognitionClick = giveRecognitionClick;
+
+        async function abrirReconocimiento(personName) {
+            if (!settingsUnlocked) return;
             const result = await showPromptModal(`Reconocer a ${personName}`, [
                 { label: '¿Quién da este reconocimiento? (tu nombre)', type: 'text' },
                 { label: `¿En qué te ayudó ${personName}?`, type: 'textarea' }
@@ -2028,7 +2160,6 @@
             localStorage.setItem(RECOGNITION_OVERRIDES_KEY, JSON.stringify(recognitionOverrides));
             location.reload();
         }
-        window.giveRecognitionClick = giveRecognitionClick;
 
         function uploadPhotoClick(event, btn) {
             event.stopPropagation();
@@ -2050,10 +2181,15 @@
 
         const GENEROS_VALIDOS = ['hombre', 'mujer', 'no-binario'];
 
-        async function editPersonClick(event, btn) {
+        function editPersonClick(event, btn) {
             event.stopPropagation();
             if (!settingsUnlocked) return;
-            const key = btn.getAttribute('data-person');
+            abrirEditor(btn.getAttribute('data-person'));
+        }
+        window.editPersonClick = editPersonClick;
+
+        async function abrirEditor(key) {
+            if (!settingsUnlocked) return;
             const node = findNodeByKey(ORG_DATA, key);
             if (!node) return;
 
@@ -2093,7 +2229,6 @@
             localStorage.setItem(FIELD_EDITS_KEY, JSON.stringify(fieldEdits));
             location.reload();
         }
-        window.editPersonClick = editPersonClick;
 
         // Búsqueda y Filtrado
         const searchInput = document.getElementById('searchInput');
@@ -2263,6 +2398,7 @@
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
         const resetRecognitionsBtn = document.getElementById('resetRecognitionsBtn');
         const resetEditsBtn = document.getElementById('resetEditsBtn');
+        const resetStructureBtn = document.getElementById('resetStructureBtn');
         const jsonFileInput = document.getElementById('jsonFileInput');
         const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
@@ -2288,6 +2424,10 @@
             resetEditsBtn.style.display = '';
         }
 
+        if (resetStructureBtn && (Object.keys(structureEdits).length > 0 || Object.keys(vacantEdits).length > 0)) {
+            resetStructureBtn.style.display = '';
+        }
+
         function closeSettingsMenu() {
             if (settingsMenu) settingsMenu.style.display = 'none';
         }
@@ -2296,10 +2436,13 @@
             document.body.classList.add('edit-mode');
             if (photoEditNotice) photoEditNotice.style.display = 'block';
             if (exitEditModeBtn) exitEditModeBtn.style.display = '';
+            habilitarArrastre(true);
         }
 
         function deactivateEditMode() {
             settingsUnlocked = false;
+            habilitarArrastre(false);
+            closeCardContextMenu();
             document.body.classList.remove('edit-mode');
             if (photoEditNotice) photoEditNotice.style.display = 'none';
             if (exitEditModeBtn) exitEditModeBtn.style.display = 'none';
@@ -2356,14 +2499,178 @@
             startPhotoUpload(photoEl.getAttribute('data-person'));
         });
 
+        // ---- Menú contextual (clic derecho sobre una tarjeta, en modo edición) ----
+        const cardContextMenu = document.getElementById('cardContextMenu');
+
+        function closeCardContextMenu() {
+            if (cardContextMenu) cardContextMenu.style.display = 'none';
+        }
+
+        function personKeyFromEvent(target) {
+            const conBoton = target.closest('[data-person]');
+            if (conBoton) return conBoton.getAttribute('data-person');
+            // Tarjetas vacantes: no tienen data-person, se busca por el nodo renderizado
+            const contenedor = target.closest('[data-node-key]');
+            return contenedor ? contenedor.getAttribute('data-node-key') : null;
+        }
+
+        function openCardContextMenu(x, y, personKey) {
+            const node = findNodeByKeyIn(ORG_DATA, personKey);
+            if (!node || !cardContextMenu) return;
+
+            const nombre = node.vacant ? (node.role || 'Posición') : node.name;
+            const opciones = [];
+
+            if (node.vacant) {
+                opciones.push({ texto: '↩️ Restaurar persona', accion: () => toggleVacante(personKey, false) });
+            } else {
+                opciones.push({ texto: '✏️ Editar datos', accion: () => abrirEditor(personKey) });
+                opciones.push({ texto: '📷 Cargar foto', accion: () => startPhotoUpload(personKey) });
+                opciones.push({ texto: '🙌 Reconocer', accion: () => abrirReconocimiento(personKey) });
+                opciones.push({ texto: '💼 Marcar como vacante', accion: () => toggleVacante(personKey, true) });
+            }
+
+            cardContextMenu.innerHTML =
+                `<div class="context-menu-header">${escapeHtml(nombre)}</div>` +
+                opciones.map((o, i) => `<button type="button" class="settings-menu-item" data-idx="${i}">${o.texto}</button>`).join('');
+
+            cardContextMenu.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    closeCardContextMenu();
+                    opciones[parseInt(btn.dataset.idx, 10)].accion();
+                });
+            });
+
+            cardContextMenu.style.display = 'flex';
+            // Reposicionar si se saldría de la pantalla
+            const ancho = cardContextMenu.offsetWidth;
+            const alto = cardContextMenu.offsetHeight;
+            cardContextMenu.style.left = Math.min(x, window.innerWidth - ancho - 8) + 'px';
+            cardContextMenu.style.top = Math.min(y, window.innerHeight - alto - 8) + 'px';
+        }
+
         document.addEventListener('contextmenu', (e) => {
             if (!settingsUnlocked) return;
-            const photoEl = e.target.closest('.org-photo[data-person]');
-            if (!photoEl) return;
+            const card = e.target.closest('.org-card, .org-position');
+            if (!card) return;
+            const personKey = personKeyFromEvent(e.target) ||
+                              (card.querySelector('[data-person]') || {}).getAttribute?.('data-person') ||
+                              card.getAttribute('data-node-key');
+            if (!personKey) return;
             e.preventDefault();
             e.stopPropagation();
-            startPhotoUpload(photoEl.getAttribute('data-person'));
+            openCardContextMenu(e.clientX, e.clientY, personKey);
         });
+
+        document.addEventListener('click', (e) => {
+            if (cardContextMenu && cardContextMenu.style.display === 'flex' && !cardContextMenu.contains(e.target)) {
+                closeCardContextMenu();
+            }
+        });
+
+        // ---- Arrastrar y soltar para reasignar jefe ----
+        let dragSourceKey = null;
+
+        function elementosArrastrables() {
+            return document.querySelectorAll('.org-card[data-node-key], .org-position[data-node-key]');
+        }
+
+        function habilitarArrastre(activar) {
+            elementosArrastrables().forEach(el => {
+                if (activar) {
+                    el.setAttribute('draggable', 'true');
+                } else {
+                    el.setAttribute('draggable', 'false');
+                }
+            });
+        }
+
+        function limpiarResaltadoDrop() {
+            document.querySelectorAll('.drop-target-ok, .drop-target-bad')
+                .forEach(el => el.classList.remove('drop-target-ok', 'drop-target-bad'));
+        }
+
+        document.addEventListener('dragstart', (e) => {
+            if (!settingsUnlocked) return;
+            const el = e.target.closest('[data-node-key]');
+            if (!el) return;
+            dragSourceKey = el.getAttribute('data-node-key');
+            el.classList.add('drag-source');
+            e.dataTransfer.effectAllowed = 'move';
+            // Firefox necesita que se escriba algo para iniciar el arrastre
+            try { e.dataTransfer.setData('text/plain', dragSourceKey); } catch (err) {}
+        });
+
+        document.addEventListener('dragend', () => {
+            document.querySelectorAll('.drag-source').forEach(el => el.classList.remove('drag-source'));
+            limpiarResaltadoDrop();
+            dragSourceKey = null;
+        });
+
+        document.addEventListener('dragover', (e) => {
+            if (!settingsUnlocked || !dragSourceKey) return;
+            const destino = e.target.closest('[data-node-key]');
+            if (!destino) return;
+            const destinoKey = destino.getAttribute('data-node-key');
+            if (destinoKey === dragSourceKey) return;
+
+            e.preventDefault();
+            limpiarResaltadoDrop();
+            const valido = puedeMover(dragSourceKey, destinoKey);
+            destino.classList.add(valido ? 'drop-target-ok' : 'drop-target-bad');
+            e.dataTransfer.dropEffect = valido ? 'move' : 'none';
+        });
+
+        document.addEventListener('drop', async (e) => {
+            if (!settingsUnlocked || !dragSourceKey) return;
+            const destino = e.target.closest('[data-node-key]');
+            if (!destino) return;
+            e.preventDefault();
+            const destinoKey = destino.getAttribute('data-node-key');
+            const personaKey = dragSourceKey;
+            limpiarResaltadoDrop();
+            dragSourceKey = null;
+
+            if (personaKey === destinoKey) return;
+
+            const persona = findNodeByKeyIn(ORG_DATA, personaKey);
+            const nuevoJefe = findNodeByKeyIn(ORG_DATA, destinoKey);
+            if (!persona || !nuevoJefe) return;
+
+            if (!puedeMover(personaKey, destinoKey)) {
+                await showAlertModal(
+                    `No se puede mover a ${persona.name || persona.role} bajo ${nuevoJefe.name || nuevoJefe.role}, ` +
+                    `porque esa persona ya depende de ella (se crearía un ciclo en el organigrama).`);
+                return;
+            }
+
+            const jefeActual = findParentOf(ORG_DATA, personaKey);
+            if (jefeActual && keyOf(jefeActual) === destinoKey) return;   // ya es su jefe
+
+            const ok = await showConfirmModal(
+                `¿Mover a ${persona.name || persona.role} para que reporte a ${nuevoJefe.name || nuevoJefe.role}?\n\n` +
+                `Su equipo se mueve con ella.`);
+            if (!ok) return;
+
+            structureEdits[personaKey] = destinoKey;
+            localStorage.setItem(STRUCTURE_EDITS_KEY, JSON.stringify(structureEdits));
+            location.reload();
+        });
+
+        async function toggleVacante(personKey, marcarVacante) {
+            const node = findNodeByKeyIn(ORG_DATA, personKey);
+            if (!node) return;
+            if (marcarVacante) {
+                const ok = await showConfirmModal(
+                    `¿Marcar la posición de ${node.name} (${node.role}) como vacante?\n\nSe conserva el puesto y su equipo; la persona deja de contarse en el total. Puedes revertirlo con clic derecho.`);
+                if (!ok) return;
+                vacantEdits[personKey] = true;
+            } else {
+                delete vacantEdits[personKey];
+            }
+            localStorage.setItem(VACANT_EDITS_KEY, JSON.stringify(vacantEdits));
+            location.reload();
+        }
 
         if (photoUploadInput) {
             photoUploadInput.addEventListener('change', async function(e) {
@@ -2392,6 +2699,17 @@
                 closeSettingsMenu();
                 if (await showConfirmModal('¿Quitar todas las fotos que subiste manualmente y volver a las siluetas / fotos originales?')) {
                     localStorage.removeItem(PHOTO_OVERRIDES_KEY);
+                    location.reload();
+                }
+            });
+        }
+
+        if (resetStructureBtn) {
+            resetStructureBtn.addEventListener('click', async () => {
+                closeSettingsMenu();
+                if (await showConfirmModal('¿Deshacer los cambios de estructura (movimientos de personas y posiciones marcadas como vacantes)?')) {
+                    localStorage.removeItem(STRUCTURE_EDITS_KEY);
+                    localStorage.removeItem(VACANT_EDITS_KEY);
                     location.reload();
                 }
             });
