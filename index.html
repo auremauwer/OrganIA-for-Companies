@@ -1060,7 +1060,8 @@
         }
 
         .give-recognition-btn,
-        .upload-photo-btn {
+        .upload-photo-btn,
+        .edit-person-btn {
             display: none;
             background: #eef1f7;
             color: #2a5298;
@@ -1075,12 +1076,14 @@
         }
 
         .give-recognition-btn:hover,
-        .upload-photo-btn:hover {
+        .upload-photo-btn:hover,
+        .edit-person-btn:hover {
             background: #dde7fb;
         }
 
         body.edit-mode .give-recognition-btn,
-        body.edit-mode .upload-photo-btn {
+        body.edit-mode .upload-photo-btn,
+        body.edit-mode .edit-person-btn {
             display: inline-block;
         }
 
@@ -1194,7 +1197,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: usa 📷 Cargar foto para cambiar la imagen de alguien (o haz clic sobre su foto), y 🙌 Reconocer para darle un reconocimiento.
+                🖊 Modo edición activo: usa ✏️ Editar para corregir datos, 📷 Cargar foto para cambiar la imagen, y 🙌 Reconocer para dar un reconocimiento.
             </div>
         </div>
 
@@ -1206,6 +1209,7 @@
             <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
+            <button class="settings-menu-item" id="resetEditsBtn" style="display:none;">✏️ Deshacer correcciones de datos</button>
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
             <button class="settings-menu-item reset-item" id="exitEditModeBtn" style="display:none;">🔒 Salir del modo edición</button>
         </div>
@@ -1495,18 +1499,55 @@
             console.error('No se pudo cargar la organización guardada, se usan los datos por defecto.', e);
         }
 
-        // Fotos subidas manualmente por persona (independiente de si los datos son propios o de ejemplo)
-        const PHOTO_OVERRIDES_KEY = 'organia_photo_overrides';
-        let photoOverrides = {};
-        try {
-            photoOverrides = JSON.parse(localStorage.getItem(PHOTO_OVERRIDES_KEY) || '{}');
-        } catch (e) {
-            photoOverrides = {};
+        // Identidad estable para los cambios guardados: el nombre ORIGINAL de los datos base.
+        // Así, aunque se corrija el nombre desde el modo edición, la foto y los reconocimientos
+        // de esa persona siguen apuntando a ella.
+        function assignKeys(node) {
+            if (node.name) node._key = node.name;
+            if (node.children) node.children.forEach(assignKeys);
+        }
+        assignKeys(ORG_DATA);
+
+        function keyOf(node) {
+            return node._key || node.name || null;
         }
 
+        function loadOverrides(storageKey) {
+            try {
+                return JSON.parse(localStorage.getItem(storageKey) || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        // Correcciones de datos hechas desde el modo edición (nombre, puesto, resumen, etc.)
+        const FIELD_EDITS_KEY = 'organia_field_edits';
+        let fieldEdits = loadOverrides(FIELD_EDITS_KEY);
+
+        function applyFieldEdits(node) {
+            const k = keyOf(node);
+            if (k && fieldEdits[k]) {
+                Object.keys(fieldEdits[k]).forEach(campo => {
+                    const valor = fieldEdits[k][campo];
+                    if (valor === '') {
+                        delete node[campo];
+                    } else {
+                        node[campo] = valor;
+                    }
+                });
+            }
+            if (node.children) node.children.forEach(applyFieldEdits);
+        }
+        applyFieldEdits(ORG_DATA);
+
+        // Fotos subidas manualmente por persona (independiente de si los datos son propios o de ejemplo)
+        const PHOTO_OVERRIDES_KEY = 'organia_photo_overrides';
+        let photoOverrides = loadOverrides(PHOTO_OVERRIDES_KEY);
+
         function applyPhotoOverrides(node) {
-            if (node.name && photoOverrides[node.name]) {
-                node.photo = photoOverrides[node.name];
+            const k = keyOf(node);
+            if (k && photoOverrides[k]) {
+                node.photo = photoOverrides[k];
             }
             if (node.children) node.children.forEach(applyPhotoOverrides);
         }
@@ -1514,17 +1555,13 @@
 
         // Reconocimientos entre compañeros (quién lo dio + en qué ayudó), agregados desde el modo edición
         const RECOGNITION_OVERRIDES_KEY = 'organia_recognition_overrides';
-        let recognitionOverrides = {};
-        try {
-            recognitionOverrides = JSON.parse(localStorage.getItem(RECOGNITION_OVERRIDES_KEY) || '{}');
-        } catch (e) {
-            recognitionOverrides = {};
-        }
+        let recognitionOverrides = loadOverrides(RECOGNITION_OVERRIDES_KEY);
 
         function applyRecognitionOverrides(node) {
-            if (node.name && recognitionOverrides[node.name] && recognitionOverrides[node.name].length) {
+            const k = keyOf(node);
+            if (k && recognitionOverrides[k] && recognitionOverrides[k].length) {
                 const existing = Array.isArray(node.recognitions) ? node.recognitions : [];
-                node.recognitions = existing.concat(recognitionOverrides[node.name]);
+                node.recognitions = existing.concat(recognitionOverrides[k]);
             }
             if (node.children) node.children.forEach(applyRecognitionOverrides);
         }
@@ -1583,7 +1620,8 @@
                 cancelBtn.textContent = cancelText;
 
                 const isPrompt = fields && fields.length > 0;
-                const inputs = (fields || []).map(f => {
+                const fieldDefs = fields || [];
+                const inputs = fieldDefs.map(f => {
                     const wrap = document.createElement('div');
                     wrap.className = 'app-modal-field';
                     const label = document.createElement('label');
@@ -1591,6 +1629,8 @@
                     const input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
                     if (f.type !== 'textarea') input.type = 'text';
                     else input.rows = 3;
+                    if (f.value) input.value = f.value;
+                    if (f.placeholder) input.placeholder = f.placeholder;
                     wrap.appendChild(label);
                     wrap.appendChild(input);
                     fieldsEl.appendChild(wrap);
@@ -1608,7 +1648,9 @@
                 function onConfirm() {
                     if (isPrompt) {
                         const values = inputs.map(inp => inp.value.trim());
-                        if (values.some(v => !v)) return;
+                        // Solo los campos no marcados como opcionales son obligatorios
+                        const faltaAlguno = values.some((v, i) => !v && !fieldDefs[i].optional);
+                        if (faltaAlguno) return;
                         cleanup(values);
                     } else {
                         cleanup(true);
@@ -1715,12 +1757,17 @@
 
         function giveRecognitionBtnHtml(node) {
             if (!node.name || node.vacant) return '';
-            return `<button type="button" class="give-recognition-btn" data-person="${escapeAttr(node.name)}" onclick="giveRecognitionClick(event, this)">🙌 Reconocer</button>`;
+            return `<button type="button" class="give-recognition-btn" data-person="${escapeAttr(keyOf(node))}" onclick="giveRecognitionClick(event, this)">🙌 Reconocer</button>`;
         }
 
         function uploadPhotoBtnHtml(node) {
             if (!node.name || node.vacant) return '';
-            return `<button type="button" class="upload-photo-btn" data-person="${escapeAttr(node.name)}" onclick="uploadPhotoClick(event, this)">📷 Cargar foto</button>`;
+            return `<button type="button" class="upload-photo-btn" data-person="${escapeAttr(keyOf(node))}" onclick="uploadPhotoClick(event, this)">📷 Cargar foto</button>`;
+        }
+
+        function editPersonBtnHtml(node) {
+            if (!node.name || node.vacant) return '';
+            return `<button type="button" class="edit-person-btn" data-person="${escapeAttr(keyOf(node))}" onclick="editPersonClick(event, this)">✏️ Editar</button>`;
         }
 
         function avatarHtml(node, extraClass) {
@@ -1728,7 +1775,7 @@
             if (node.vacant) {
                 return `<div class="${cls} vacant-photo">${VACANT_SVG}</div>`;
             }
-            const personAttr = node.name ? ` data-person="${escapeAttr(node.name)}"` : '';
+            const personAttr = node.name ? ` data-person="${escapeAttr(keyOf(node))}"` : '';
             if (node.photo) {
                 return `<div class="${cls}"${personAttr}><img src="${node.photo}" alt="${escapeAttr(node.name)}"></div>`;
             }
@@ -1771,6 +1818,7 @@
                         ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                         ${recognitionsHtml(node)}
                         ${badge}
+                        ${editPersonBtnHtml(node)}
                         ${uploadPhotoBtnHtml(node)}
                         ${giveRecognitionBtnHtml(node)}
                     </div>
@@ -1786,7 +1834,7 @@
                 li.querySelector('.org-card').addEventListener('click', function(e) {
                     // No colapsar (ni cortar la propagación) si el clic fue en un control
                     // interactivo de la tarjeta: la foto o los botones de edición.
-                    if (e.target.closest('.org-photo[data-person], .give-recognition-btn, .upload-photo-btn')) {
+                    if (e.target.closest('.org-photo[data-person], .give-recognition-btn, .upload-photo-btn, .edit-person-btn')) {
                         return;
                     }
                     e.stopPropagation();
@@ -1857,6 +1905,7 @@
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                                     ${recognitionsHtml(node)}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
+                                    ${editPersonBtnHtml(node)}
                                     ${uploadPhotoBtnHtml(node)}
                                     ${giveRecognitionBtnHtml(node)}
                                 </div>
@@ -1987,6 +2036,64 @@
             startPhotoUpload(btn.getAttribute('data-person'));
         }
         window.uploadPhotoClick = uploadPhotoClick;
+
+        function findNodeByKey(node, key) {
+            if (keyOf(node) === key) return node;
+            if (node.children) {
+                for (const child of node.children) {
+                    const found = findNodeByKey(child, key);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        const GENEROS_VALIDOS = ['hombre', 'mujer', 'no-binario'];
+
+        async function editPersonClick(event, btn) {
+            event.stopPropagation();
+            if (!settingsUnlocked) return;
+            const key = btn.getAttribute('data-person');
+            const node = findNodeByKey(ORG_DATA, key);
+            if (!node) return;
+
+            const result = await showModal({
+                title: `Editar datos`,
+                fields: [
+                    { label: 'Nombre', type: 'text', value: node.name || '' },
+                    { label: 'Puesto', type: 'text', value: node.role || '' },
+                    { label: 'Departamento (opcional)', type: 'text', value: node.team || '', optional: true },
+                    { label: 'Fecha de ingreso — AAAA-MM-DD (opcional)', type: 'text', value: node.startDate || '', optional: true, placeholder: '2022-03-15' },
+                    { label: 'Género: hombre, mujer o no-binario (opcional)', type: 'text', value: node.gender || '', optional: true },
+                    { label: 'A qué se dedica (opcional)', type: 'textarea', value: node.summary || '', optional: true }
+                ],
+                confirmText: 'Guardar'
+            });
+            if (!result) return;
+
+            const [nombre, puesto, depto, fechaIngreso, genero, resumen] = result;
+
+            if (fechaIngreso && !/^\d{4}-\d{2}(-\d{2})?$/.test(fechaIngreso)) {
+                await showAlertModal('La fecha de ingreso debe tener el formato AAAA-MM-DD (por ejemplo 2022-03-15). No se guardaron los cambios.');
+                return;
+            }
+            if (genero && !GENEROS_VALIDOS.includes(genero.toLowerCase())) {
+                await showAlertModal('El género debe ser "hombre", "mujer" o "no-binario". No se guardaron los cambios.');
+                return;
+            }
+
+            fieldEdits[key] = {
+                name: nombre,
+                role: puesto,
+                team: depto,
+                startDate: fechaIngreso,
+                gender: genero ? genero.toLowerCase() : '',
+                summary: resumen
+            };
+            localStorage.setItem(FIELD_EDITS_KEY, JSON.stringify(fieldEdits));
+            location.reload();
+        }
+        window.editPersonClick = editPersonClick;
 
         // Búsqueda y Filtrado
         const searchInput = document.getElementById('searchInput');
@@ -2155,6 +2262,7 @@
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
         const resetRecognitionsBtn = document.getElementById('resetRecognitionsBtn');
+        const resetEditsBtn = document.getElementById('resetEditsBtn');
         const jsonFileInput = document.getElementById('jsonFileInput');
         const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
@@ -2174,6 +2282,10 @@
 
         if (resetRecognitionsBtn && Object.keys(recognitionOverrides).length > 0) {
             resetRecognitionsBtn.style.display = '';
+        }
+
+        if (resetEditsBtn && Object.keys(fieldEdits).length > 0) {
+            resetEditsBtn.style.display = '';
         }
 
         function closeSettingsMenu() {
@@ -2285,6 +2397,16 @@
             });
         }
 
+        if (resetEditsBtn) {
+            resetEditsBtn.addEventListener('click', async () => {
+                closeSettingsMenu();
+                if (await showConfirmModal('¿Deshacer todas las correcciones de datos que hiciste (nombres, puestos, descripciones)?')) {
+                    localStorage.removeItem(FIELD_EDITS_KEY);
+                    location.reload();
+                }
+            });
+        }
+
         if (resetRecognitionsBtn) {
             resetRecognitionsBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
@@ -2297,7 +2419,7 @@
 
         if (downloadExampleBtn) {
             downloadExampleBtn.addEventListener('click', () => {
-                const blob = new Blob([JSON.stringify(EXAMPLE_ORG_DATA, null, 2)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(limpiarParaExportar(EXAMPLE_ORG_DATA), null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -2312,9 +2434,20 @@
 
         // Descarga la organización TAL COMO se ve ahora mismo (default o subida, con fotos incluidas)
         // para poder pedirle a alguien con acceso al repositorio que la publique de forma permanente.
+        // Quita los campos internos que la app agrega en tiempo de ejecución
+        function limpiarParaExportar(node) {
+            const copia = {};
+            Object.keys(node).forEach(k => {
+                if (k === '_key' || k === 'displayAccent' || k === 'children') return;
+                copia[k] = node[k];
+            });
+            if (node.children) copia.children = node.children.map(limpiarParaExportar);
+            return copia;
+        }
+
         if (downloadCurrentBtn) {
             downloadCurrentBtn.addEventListener('click', () => {
-                const blob = new Blob([JSON.stringify(ORG_DATA, null, 2)], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(limpiarParaExportar(ORG_DATA), null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
