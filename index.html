@@ -1084,6 +1084,41 @@
             display: inline-block;
         }
 
+        /* Antigüedad, resumen de funciones y género */
+        .person-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: #eef1f6;
+            color: #55617a;
+            font-size: 0.66rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .meta-chip.tenure-chip {
+            background: #e8f3ec;
+            color: #2f6b47;
+        }
+
+        .person-summary {
+            font-size: 0.72rem;
+            color: #5a6478;
+            line-height: 1.35;
+            margin-top: 6px;
+            padding-left: 7px;
+            border-left: 2px solid #dfe4ec;
+        }
+
         .recognitions-list {
             margin-top: 6px;
         }
@@ -1167,6 +1202,7 @@
         <div id="settingsMenu" class="settings-menu" style="display:none;">
             <button class="settings-menu-item" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
             <button class="settings-menu-item" id="downloadCurrentBtn">⬇ Descargar mi organización actual (con fotos)</button>
+            <button class="settings-menu-item" id="downloadExcelBtn">📊 Descargar Excel (CSV)</button>
             <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
@@ -1263,10 +1299,10 @@
     <script>
         // ORG_DATA - Estructura Organizacional
         let ORG_DATA = {
-            name: 'Carlos Mendoza', role: 'Chief Executive Officer', team: 'Dirección General', accent: '#1e3c72', photo: 'photos/carlos-mendoza.png',
+            name: 'Carlos Mendoza', role: 'Chief Executive Officer', startDate: '2018-02-05', gender: 'hombre', summary: 'Define la estrategia global de la compañía, encabeza al comité ejecutivo y responde ante el consejo de administración.', team: 'Dirección General', accent: '#1e3c72', photo: 'photos/carlos-mendoza.png',
             children: [
-                { name: 'Magdalena Flores', role: 'Asistente Ejecutivo', team: 'Dirección General', accent: '#1e3c72' },
-                { name: 'Dr. Santiago Rivera', role: 'Chief Technology Officer', team: 'Tecnología', accent: '#e21c1c', photo: 'photos/santiago-rivera.png',
+                { name: 'Magdalena Flores', role: 'Asistente Ejecutivo', startDate: '2021-09-13', gender: 'mujer', summary: 'Coordina la agenda, juntas y viajes de la Dirección General, y da seguimiento a los acuerdos del comité ejecutivo.', team: 'Dirección General', accent: '#1e3c72' },
+                { name: 'Dr. Santiago Rivera', role: 'Chief Technology Officer', startDate: '2019-06-03', gender: 'hombre', summary: 'Lidera la estrategia tecnológica, la arquitectura de las plataformas y los equipos de ingeniería, infraestructura y QA.', team: 'Tecnología', accent: '#e21c1c', photo: 'photos/santiago-rivera.png',
                   children: [
                     { name: 'Alejandro Gómez', role: 'VP Engineering', team: 'Tecnología', accent: '#e21c1c',
                       children: [
@@ -1275,7 +1311,7 @@
                             { name: 'Gabriel Núñez', role: 'Becario de Ingeniería' }
                           ]
                         },
-                        { name: 'Sofia Chen', role: 'Senior Developer Frontend', badge: 'AI Champion', badgeType: 'ai' },
+                        { name: 'Sofia Chen', role: 'Senior Developer Frontend', startDate: '2023-08-07', gender: 'mujer', summary: 'Desarrolla interfaces del producto en React y da mantenimiento a la librería de componentes del equipo de frontend.', badge: 'AI Champion', badgeType: 'ai' },
                         { name: 'Marco López', role: 'Frontend Specialist' }
                       ]},
                     { name: 'Valentina Soto', role: 'VP Backend Services', team: 'Tecnología', accent: '#e21c1c',
@@ -1298,7 +1334,7 @@
                         { role: 'Penetration Tester', vacant: true }
                       ]}
                   ]},
-                { name: 'Dra. Marcela Hidalgo', role: 'Chief Data Officer', team: 'Datos', accent: '#e2861c', photo: 'photos/marcela-hidalgo.png',
+                { name: 'Dra. Marcela Hidalgo', role: 'Chief Data Officer', startDate: '2022-03-14', gender: 'mujer', summary: 'Dirige la estrategia de datos e inteligencia artificial: gobierno de datos, analítica y modelos de machine learning.', team: 'Datos', accent: '#e2861c', photo: 'photos/marcela-hidalgo.png',
                   children: [
                     { name: 'Roberto Silva', role: 'Head of Data Engineering', team: 'Datos', accent: '#e2861c',
                       children: [
@@ -1358,7 +1394,7 @@
                         { name: 'Carolina Bravo', role: 'Contract Specialist' }
                       ]}
                   ]},
-                { name: 'Fernando López', role: 'Chief Financial Officer', team: 'Finanzas', accent: '#17be79', photo: 'photos/fernando-lopez.png',
+                { name: 'Fernando López', role: 'Chief Financial Officer', startDate: '2020-01-20', gender: 'hombre', summary: 'Responsable de la salud financiera: contabilidad, planeación financiera, tesorería y reporte de resultados.', team: 'Finanzas', accent: '#17be79', photo: 'photos/fernando-lopez.png',
                   children: [
                     { name: 'Rocío García', role: 'Head of Accounting', team: 'Finanzas', accent: '#17be79',
                       children: [
@@ -1604,6 +1640,72 @@
             return showModal({ title, fields });
         }
 
+        // ---- Antigüedad, género y resumen de funciones ----
+        // Acepta 'YYYY-MM-DD' o 'YYYY-MM'. Se construye con componentes locales para
+        // evitar el corrimiento de un día que produce new Date('YYYY-MM-DD') (se parsea como UTC).
+        function parseStartDate(value) {
+            if (!value) return null;
+            const parts = String(value).trim().split('-');
+            if (parts.length < 2) return null;
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const day = parts.length > 2 ? parseInt(parts[2], 10) : 1;
+            if (!year || !month) return null;
+            const d = new Date(year, month - 1, day);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function tenureText(startDate) {
+            const start = parseStartDate(startDate);
+            if (!start) return '';
+            const now = new Date();
+            if (start > now) return '';
+
+            let years = now.getFullYear() - start.getFullYear();
+            let months = now.getMonth() - start.getMonth();
+            if (now.getDate() < start.getDate()) months--;
+            if (months < 0) { years--; months += 12; }
+
+            const yearPart = years > 0 ? `${years} ${years === 1 ? 'año' : 'años'}` : '';
+            const monthPart = months > 0 ? `${months} ${months === 1 ? 'mes' : 'meses'}` : '';
+            if (yearPart && monthPart) return `${yearPart}, ${monthPart}`;
+            if (yearPart) return yearPart;
+            if (monthPart) return monthPart;
+            return 'Menos de un mes';
+        }
+
+        const GENDER_LABELS = {
+            'hombre': { icon: '♂', label: 'Hombre' },
+            'mujer': { icon: '♀', label: 'Mujer' },
+            'no-binario': { icon: '⚧', label: 'No binario' },
+            'no binario': { icon: '⚧', label: 'No binario' }
+        };
+
+        function genderInfo(gender) {
+            if (!gender) return null;
+            return GENDER_LABELS[String(gender).trim().toLowerCase()] || null;
+        }
+
+        function personMetaHtml(node) {
+            if (node.vacant) return '';
+            const chips = [];
+            const tenure = tenureText(node.startDate);
+            if (tenure) {
+                chips.push(`<span class="meta-chip tenure-chip" title="Ingresó el ${escapeAttr(node.startDate)}">⏳ ${escapeHtml(tenure)}</span>`);
+            }
+            const g = genderInfo(node.gender);
+            if (g) {
+                chips.push(`<span class="meta-chip">${g.icon} ${escapeHtml(g.label)}</span>`);
+            }
+            if (!chips.length) return '';
+            return `<div class="person-meta">${chips.join('')}</div>`;
+        }
+
+        function personSummaryHtml(node) {
+            if (node.vacant || !node.summary) return '';
+            return `<div class="person-summary">${escapeHtml(node.summary)}</div>`;
+        }
+
         function recognitionsHtml(node) {
             if (!node.recognitions || !node.recognitions.length) return '';
             return `<div class="recognitions-list">${node.recognitions.map(r =>
@@ -1664,6 +1766,8 @@
                             </div>
                         </div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
+                        ${personMetaHtml(node)}
+                        ${personSummaryHtml(node)}
                         ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                         ${recognitionsHtml(node)}
                         ${badge}
@@ -1748,6 +1852,8 @@
                                     </div>
                                     <div class="person-role">${node.role}</div>
                                     ${parentName ? `<div class="reports-to">↳ Reporta a: ${parentName}</div>` : ''}
+                                    ${personMetaHtml(node)}
+                                    ${personSummaryHtml(node)}
                                     ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
                                     ${recognitionsHtml(node)}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
@@ -2044,6 +2150,7 @@
         const settingsMenu = document.getElementById('settingsMenu');
         const downloadExampleBtn = document.getElementById('downloadExampleBtn');
         const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
+        const downloadExcelBtn = document.getElementById('downloadExcelBtn');
         const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
@@ -2212,6 +2319,74 @@
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = 'organia-mi-organizacion.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                closeSettingsMenu();
+            });
+        }
+
+        // ---- Exportar a Excel (CSV con BOM, para que Excel respete los acentos) ----
+        function csvCell(value) {
+            const text = value === null || value === undefined ? '' : String(value);
+            return '"' + text.replace(/"/g, '""') + '"';
+        }
+
+        function flattenOrgForExport(node, parentName = null, parentDept = null, level = 1, rows = []) {
+            const dept = node.team || parentDept || '';
+            const directs = node.children ? node.children.length : 0;
+            const total = (node.children && node.children.length) ? countEmployees({ children: node.children }) : 0;
+            const g = genderInfo(node.gender);
+            const recognitions = (node.recognitions || [])
+                .map(r => `${r.from}: ${r.message}`)
+                .join(' | ');
+
+            rows.push([
+                level,
+                node.vacant ? 'Posición vacante' : (node.name || ''),
+                node.role || '',
+                dept,
+                parentName || '',
+                g ? g.label : '',
+                node.startDate || '',
+                tenureText(node.startDate),
+                node.summary || '',
+                directs,
+                total,
+                node.badge || '',
+                node.badgePeriod || '',
+                recognitions,
+                node.vacant ? 'Sí' : 'No'
+            ]);
+
+            if (node.children) {
+                node.children.forEach(child =>
+                    flattenOrgForExport(child, node.vacant ? parentName : node.name, dept, level + 1, rows)
+                );
+            }
+            return rows;
+        }
+
+        if (downloadExcelBtn) {
+            downloadExcelBtn.addEventListener('click', () => {
+                const headers = [
+                    'Nivel', 'Nombre', 'Puesto', 'Departamento', 'Reporta a', 'Género',
+                    'Fecha de ingreso', 'Antigüedad', 'A qué se dedica',
+                    'Reportes directos', 'Total a cargo',
+                    'Distintivo', 'Periodo del distintivo', 'Reconocimientos recibidos', 'Vacante'
+                ];
+                const rows = flattenOrgForExport(ORG_DATA);
+                const csv = [headers, ...rows]
+                    .map(row => row.map(csvCell).join(','))
+                    .join('\r\n');
+
+                // El BOM (﻿) hace que Excel abra el archivo como UTF-8 y respete los acentos.
+                const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'organia-organizacion.csv';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
