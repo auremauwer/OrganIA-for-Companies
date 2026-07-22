@@ -2508,6 +2508,7 @@
 
         function deactivateEditMode() {
             settingsUnlocked = false;
+            sessionStorage.removeItem(EDIT_UNLOCKED_KEY);
             habilitarArrastre(false);
             closeCardContextMenu();
             document.body.classList.remove('edit-mode');
@@ -2518,6 +2519,15 @@
 
         if (exitEditModeBtn) {
             exitEditModeBtn.addEventListener('click', deactivateEditMode);
+        }
+
+        // El modo edición sobrevive a las recargas que hace cada acción (marcar vacante,
+        // subir foto, editar...), para no pedir el PIN una y otra vez. Dura hasta cerrar
+        // la pestaña o salir del modo edición.
+        const EDIT_UNLOCKED_KEY = 'organia_edit_unlocked';
+        if (sessionStorage.getItem(EDIT_UNLOCKED_KEY) === '1') {
+            settingsUnlocked = true;
+            activateEditMode();
         }
 
         if (settingsGearBtn) {
@@ -2538,6 +2548,7 @@
                         return;
                     }
                     settingsUnlocked = true;
+                    sessionStorage.setItem(EDIT_UNLOCKED_KEY, '1');
                     activateEditMode();
                 }
                 settingsMenu.style.display = 'flex';
@@ -3077,6 +3088,51 @@
                     if (isChartViewActive()) updateMinimapViewport();
                 }, { passive: true });
             }
+        })();
+
+        // ---- Conservar la vista entre recargas ----
+        // Cada acción de edición recarga la página; sin esto, siempre se volvía a la
+        // Vista Lista y se perdían las ramas expandidas, el zoom y la posición.
+        const VIEW_STATE_KEY = 'organia_view_state';
+
+        window.addEventListener('beforeunload', () => {
+            const expandidos = Array.from(document.querySelectorAll('#orgTreeRoot li.has-children:not(.node-collapsed)'))
+                .map(li => li.querySelector(':scope > .org-card')?.getAttribute('data-node-key'))
+                .filter(Boolean);
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            sessionStorage.setItem(VIEW_STATE_KEY, JSON.stringify({
+                view: document.querySelector('.view-toggle-btn.active')?.dataset.view || 'list',
+                expandidos,
+                zoom: chartZoom,
+                scrollY: window.scrollY,
+                wrapperScrollLeft: wrapper ? wrapper.scrollLeft : 0
+            }));
+        });
+
+        (function restaurarVista() {
+            let st = null;
+            try { st = JSON.parse(sessionStorage.getItem(VIEW_STATE_KEY) || 'null'); } catch (e) {}
+            if (!st) return;
+
+            if (st.view && st.view !== 'list') {
+                const btn = document.querySelector(`.view-toggle-btn[data-view="${st.view}"]`);
+                if (btn) btn.click();
+            }
+
+            if (Array.isArray(st.expandidos) && st.expandidos.length) {
+                const claves = new Set(st.expandidos);
+                document.querySelectorAll('#orgTreeRoot .org-card[data-node-key]').forEach(card => {
+                    if (claves.has(card.getAttribute('data-node-key'))) {
+                        card.closest('li')?.classList.remove('node-collapsed');
+                    }
+                });
+            }
+
+            if (st.zoom && st.zoom !== 1) setChartZoom(st.zoom);
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            if (wrapper && st.wrapperScrollLeft) wrapper.scrollLeft = st.wrapperScrollLeft;
+            if (st.scrollY) window.scrollTo(0, st.scrollY);
+            refreshMinimap();
         })();
     </script>
 </body>
