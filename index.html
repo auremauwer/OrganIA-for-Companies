@@ -410,6 +410,27 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             overflow-x: auto;
             padding: 50px 30px;
+            min-height: 65vh;   /* aprovecha la altura de la pantalla */
+        }
+
+        .chart-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .zoom-label {
+            min-width: 52px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #2a5298;
+            background: white;
+            border: 1px solid #e5e9f0;
+            border-radius: 6px;
+            padding: 8px 6px;
         }
 
         .tree-minimap {
@@ -1371,6 +1392,13 @@
                         <div class="stat-number" id="stat-chiefs-2">9</div>
                         <div class="stat-label">Chiefs</div>
                     </div>
+                </div>
+                <div class="chart-toolbar">
+                    <button class="control-btn" id="zoomOutBtn" title="Alejar">−</button>
+                    <span class="zoom-label" id="zoomLevelLabel">100%</span>
+                    <button class="control-btn" id="zoomInBtn" title="Acercar">+</button>
+                    <button class="control-btn" id="zoomFitBtn">Ajustar al ancho</button>
+                    <button class="control-btn" id="zoomResetBtn">Tamaño real</button>
                 </div>
                 <div class="chart-view-wrapper">
                     <ul class="org-tree" id="orgTreeRoot"></ul>
@@ -2938,6 +2966,39 @@
                 }
             });
         }
+
+        // ---- Zoom del organigrama (para que quepa en la pantalla) ----
+        let chartZoom = 1;
+
+        function setChartZoom(z) {
+            chartZoom = Math.min(2, Math.max(0.05, z));
+            const tree = document.getElementById('orgTreeRoot');
+            if (tree) tree.style.zoom = chartZoom;
+            const label = document.getElementById('zoomLevelLabel');
+            if (label) label.textContent = Math.round(chartZoom * 100) + '%';
+            refreshMinimap();
+        }
+
+        // Calcula el factor para que TODO el árbol (lo expandido) quepa a lo ancho
+        function fitChartToWidth() {
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            const tree = document.getElementById('orgTreeRoot');
+            if (!wrapper || !tree) return;
+            tree.style.zoom = 1;                       // medir sin zoom
+            const disponible = wrapper.clientWidth - 60;   // menos el padding del lienzo
+            const factor = disponible / tree.scrollWidth;
+            setChartZoom(Math.min(1, factor));         // nunca agranda, solo encoge para caber
+            wrapper.scrollLeft = 0;
+        }
+
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const zoomFitBtn = document.getElementById('zoomFitBtn');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => setChartZoom(chartZoom + 0.1));
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => setChartZoom(chartZoom - 0.1));
+        if (zoomFitBtn) zoomFitBtn.addEventListener('click', fitChartToWidth);
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => setChartZoom(1));
 
         // ---- Minimapa del organigrama ----
         const MINIMAP_W = 170;
