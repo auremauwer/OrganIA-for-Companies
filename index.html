@@ -1122,6 +1122,91 @@
             border-left: 2px solid #dfe4ec;
         }
 
+        /* Botón de "más información" — mantiene la tarjeta compacta */
+        .more-info-btn {
+            background: none;
+            border: 1px solid #dfe4ec;
+            color: #64748b;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-size: 0.66rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .more-info-btn:hover {
+            background: #eef1f7;
+            color: #2a5298;
+            border-color: #b7c4dd;
+        }
+
+        /* Panel de detalle de la persona */
+        .detail-modal {
+            max-width: 440px;
+        }
+
+        .detail-head {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .detail-head .org-photo {
+            width: 58px;
+            height: 58px;
+            min-width: 58px;
+        }
+
+        .detail-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1e3c72;
+            line-height: 1.2;
+        }
+
+        .detail-role {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .detail-rows {
+            border-top: 1px solid #eef1f7;
+            padding-top: 12px;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            align-items: flex-start;
+        }
+
+        .detail-row dt {
+            min-width: 105px;
+            color: #94a3b8;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .detail-row dd {
+            margin: 0;
+            color: #2c3e50;
+            line-height: 1.4;
+        }
+
+        .detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #eef1f7;
+        }
+
         /* Menú contextual (clic derecho sobre una tarjeta, en modo edición) */
         .card-context-menu {
             position: fixed;
@@ -1249,7 +1334,7 @@
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
-                🖊 Modo edición activo: <strong>clic derecho</strong> sobre una tarjeta abre el menú (editar, foto, reconocer, marcar vacante) y puedes <strong>arrastrar una tarjeta sobre otra</strong> para cambiarle de jefe.
+                🖊 Modo edición activo: <strong>clic derecho</strong> sobre una tarjeta abre el menú (editar, foto, reconocer, marcar vacante), y puedes <strong>arrastrar una tarjeta sobre otra</strong> para cambiarle de jefe. Las acciones también están dentro de <strong>ⓘ Más información</strong>.
             </div>
         </div>
 
@@ -1727,7 +1812,7 @@
         }
 
         // ---- Modal propio (reemplaza prompt/alert/confirm nativos) ----
-        function showModal({ title, message, fields, confirmText = 'Aceptar', cancelText = 'Cancelar', showCancel = true }) {
+        function showModal({ title, message, html, fields, confirmText = 'Aceptar', cancelText = 'Cancelar', showCancel = true, modalClass = '' }) {
             return new Promise((resolve) => {
                 const overlay = document.getElementById('appModal');
                 const titleEl = document.getElementById('appModalTitle');
@@ -1740,7 +1825,9 @@
                 titleEl.style.display = title ? 'block' : 'none';
                 messageEl.textContent = message || '';
                 messageEl.style.display = message ? 'block' : 'none';
-                fieldsEl.innerHTML = '';
+                fieldsEl.innerHTML = html || '';
+                const dialogEl = overlay.querySelector('.app-modal');
+                dialogEl.className = 'app-modal' + (modalClass ? ' ' + modalClass : '');
                 cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
                 confirmBtn.textContent = confirmText;
                 cancelBtn.textContent = cancelText;
@@ -1854,47 +1941,89 @@
             return GENDER_LABELS[String(gender).trim().toLowerCase()] || null;
         }
 
-        function personMetaHtml(node) {
-            if (node.vacant) return '';
-            const chips = [];
-            const tenure = tenureText(node.startDate);
-            if (tenure) {
-                chips.push(`<span class="meta-chip tenure-chip" title="Ingresó el ${escapeAttr(node.startDate)}">⏳ ${escapeHtml(tenure)}</span>`);
-            }
+        // La tarjeta se mantiene compacta: el detalle se consulta con este botón
+        function moreInfoBtnHtml(node) {
+            const k = keyOf(node);
+            if (!k) return '';
+            return `<button type="button" class="more-info-btn" data-person="${escapeAttr(k)}" onclick="moreInfoClick(event, this)">ⓘ Más información</button>`;
+        }
+
+        function detailRow(etiqueta, valor) {
+            if (!valor) return '';
+            return `<div class="detail-row"><dt>${escapeHtml(etiqueta)}</dt><dd>${escapeHtml(valor)}</dd></div>`;
+        }
+
+        async function showDetailModal(personKey) {
+            const node = findNodeByKeyIn(ORG_DATA, personKey);
+            if (!node) return;
+
+            const jefe = findParentOf(ORG_DATA, personKey);
             const g = genderInfo(node.gender);
-            if (g) {
-                chips.push(`<span class="meta-chip">${g.icon} ${escapeHtml(g.label)}</span>`);
-            }
-            if (!chips.length) return '';
-            return `<div class="person-meta">${chips.join('')}</div>`;
+            const tenure = tenureText(node.startDate);
+            const directos = node.children ? node.children.length : 0;
+            const total = directos ? countEmployees({ children: node.children }) : 0;
+
+            const badgeHtml = node.badge
+                ? `<div class="detail-row"><dt>Distintivo</dt><dd>${node.badgeType === 'ai' ? '🤖' : '🏅'} ${escapeHtml(node.badge)}` +
+                  `${node.badgePeriod ? ' · ' + escapeHtml(node.badgePeriod) : ''}` +
+                  `${node.badgeReason ? `<div style="color:#8a6d00;font-style:italic;margin-top:3px;">${escapeHtml(node.badgeReason)}</div>` : ''}</dd></div>`
+                : '';
+
+            const recon = (node.recognitions || []).length
+                ? `<div class="detail-row"><dt>Reconocimientos</dt><dd>` +
+                  node.recognitions.map(r => `<div style="margin-bottom:4px;">🙌 <strong>${escapeHtml(r.from)}</strong>: ${escapeHtml(r.message)}</div>`).join('') +
+                  `</dd></div>`
+                : '';
+
+            const acciones = settingsUnlocked && !node.vacant
+                ? `<div class="detail-actions">
+                       <button type="button" class="edit-person-btn" style="display:inline-block" onclick="detailAction(event,'editar','${escapeAttr(personKey)}')">✏️ Editar</button>
+                       <button type="button" class="upload-photo-btn" style="display:inline-block" onclick="detailAction(event,'foto','${escapeAttr(personKey)}')">📷 Cargar foto</button>
+                       <button type="button" class="give-recognition-btn" style="display:inline-block" onclick="detailAction(event,'reconocer','${escapeAttr(personKey)}')">🙌 Reconocer</button>
+                   </div>`
+                : '';
+
+            const html = `
+                <div class="detail-head">
+                    ${avatarHtml(node)}
+                    <div>
+                        <div class="detail-name">${node.vacant ? 'Posición vacante' : escapeHtml(node.name)}</div>
+                        <div class="detail-role">${escapeHtml(node.role || '')}</div>
+                    </div>
+                </div>
+                <div class="detail-rows">
+                    ${detailRow('Departamento', node.team)}
+                    ${detailRow('Reporta a', jefe ? (jefe.vacant ? jefe.role : jefe.name) : '—')}
+                    ${node.vacant ? detailRow('Estado', 'Posición vacante') : ''}
+                    ${detailRow('Antigüedad', tenure)}
+                    ${detailRow('Fecha de ingreso', node.startDate)}
+                    ${detailRow('Género', g ? g.label : '')}
+                    ${directos ? detailRow('Equipo a cargo', `${directos} directos · ${total} en total`) : ''}
+                    ${detailRow('A qué se dedica', node.summary)}
+                    ${badgeHtml}
+                    ${recon}
+                </div>
+                ${acciones}
+            `;
+
+            await showModal({ html, showCancel: false, confirmText: 'Cerrar', modalClass: 'detail-modal' });
         }
 
-        function personSummaryHtml(node) {
-            if (node.vacant || !node.summary) return '';
-            return `<div class="person-summary">${escapeHtml(node.summary)}</div>`;
+        function moreInfoClick(event, btn) {
+            event.stopPropagation();
+            showDetailModal(btn.getAttribute('data-person'));
         }
+        window.moreInfoClick = moreInfoClick;
 
-        function recognitionsHtml(node) {
-            if (!node.recognitions || !node.recognitions.length) return '';
-            return `<div class="recognitions-list">${node.recognitions.map(r =>
-                `<div class="recognition-item">🙌 <strong>${escapeHtml(r.from)}</strong>: ${escapeHtml(r.message)}</div>`
-            ).join('')}</div>`;
+        // Acciones lanzadas desde el panel de detalle
+        function detailAction(event, tipo, personKey) {
+            event.stopPropagation();
+            document.getElementById('appModalConfirm').click();   // cierra el panel
+            if (tipo === 'editar') abrirEditor(personKey);
+            else if (tipo === 'foto') startPhotoUpload(personKey);
+            else if (tipo === 'reconocer') abrirReconocimiento(personKey);
         }
-
-        function giveRecognitionBtnHtml(node) {
-            if (!node.name || node.vacant) return '';
-            return `<button type="button" class="give-recognition-btn" data-person="${escapeAttr(keyOf(node))}" onclick="giveRecognitionClick(event, this)">🙌 Reconocer</button>`;
-        }
-
-        function uploadPhotoBtnHtml(node) {
-            if (!node.name || node.vacant) return '';
-            return `<button type="button" class="upload-photo-btn" data-person="${escapeAttr(keyOf(node))}" onclick="uploadPhotoClick(event, this)">📷 Cargar foto</button>`;
-        }
-
-        function editPersonBtnHtml(node) {
-            if (!node.name || node.vacant) return '';
-            return `<button type="button" class="edit-person-btn" data-person="${escapeAttr(keyOf(node))}" onclick="editPersonClick(event, this)">✏️ Editar</button>`;
-        }
+        window.detailAction = detailAction;
 
         function avatarHtml(node, extraClass) {
             const cls = 'org-photo' + (extraClass ? ' ' + extraClass : '');
@@ -1939,14 +2068,8 @@
                             </div>
                         </div>
                         ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
-                        ${personMetaHtml(node)}
-                        ${personSummaryHtml(node)}
-                        ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
-                        ${recognitionsHtml(node)}
                         ${badge}
-                        ${editPersonBtnHtml(node)}
-                        ${uploadPhotoBtnHtml(node)}
-                        ${giveRecognitionBtnHtml(node)}
+                        ${moreInfoBtnHtml(node)}
                     </div>
                 </div>
             `;
@@ -1960,7 +2083,7 @@
                 li.querySelector('.org-card').addEventListener('click', function(e) {
                     // No colapsar (ni cortar la propagación) si el clic fue en un control
                     // interactivo de la tarjeta: la foto o los botones de edición.
-                    if (e.target.closest('.org-photo[data-person], .give-recognition-btn, .upload-photo-btn, .edit-person-btn')) {
+                    if (e.target.closest('.org-photo[data-person], .give-recognition-btn, .upload-photo-btn, .edit-person-btn, .more-info-btn')) {
                         return;
                     }
                     e.stopPropagation();
@@ -2027,14 +2150,8 @@
                                     </div>
                                     <div class="person-role">${node.role}</div>
                                     ${parentName ? `<div class="reports-to">↳ Reporta a: ${parentName}</div>` : ''}
-                                    ${personMetaHtml(node)}
-                                    ${personSummaryHtml(node)}
-                                    ${node.badgeReason ? `<div class="org-recognition-reason ${badgeTypeClass}">${node.badgeReason}</div>` : ''}
-                                    ${recognitionsHtml(node)}
                                     ${hasChildren ? `<div class="list-count-badge">👥 ${directChildren} directos · ${totalChildren} total</div>` : ''}
-                                    ${editPersonBtnHtml(node)}
-                                    ${uploadPhotoBtnHtml(node)}
-                                    ${giveRecognitionBtnHtml(node)}
+                                    ${moreInfoBtnHtml(node)}
                                 </div>
                             </div>
                         </div>
@@ -2136,13 +2253,6 @@
         window.togglePos = togglePos;
         window.toggleDept = toggleDept;
 
-        function giveRecognitionClick(event, btn) {
-            event.stopPropagation();
-            if (!settingsUnlocked) return;
-            abrirReconocimiento(btn.getAttribute('data-person'));
-        }
-        window.giveRecognitionClick = giveRecognitionClick;
-
         async function abrirReconocimiento(personName) {
             if (!settingsUnlocked) return;
             const result = await showPromptModal(`Reconocer a ${personName}`, [
@@ -2161,13 +2271,6 @@
             location.reload();
         }
 
-        function uploadPhotoClick(event, btn) {
-            event.stopPropagation();
-            if (!settingsUnlocked) return;
-            startPhotoUpload(btn.getAttribute('data-person'));
-        }
-        window.uploadPhotoClick = uploadPhotoClick;
-
         function findNodeByKey(node, key) {
             if (keyOf(node) === key) return node;
             if (node.children) {
@@ -2180,13 +2283,6 @@
         }
 
         const GENEROS_VALIDOS = ['hombre', 'mujer', 'no-binario'];
-
-        function editPersonClick(event, btn) {
-            event.stopPropagation();
-            if (!settingsUnlocked) return;
-            abrirEditor(btn.getAttribute('data-person'));
-        }
-        window.editPersonClick = editPersonClick;
 
         async function abrirEditor(key) {
             if (!settingsUnlocked) return;
