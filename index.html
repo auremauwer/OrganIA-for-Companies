@@ -1754,12 +1754,13 @@
             const k = keyOf(node);
             if (k && Object.prototype.hasOwnProperty.call(badgeEdits, k)) {
                 const b = badgeEdits[k];
-                delete node.badge; delete node.badgeType; delete node.badgeReason; delete node.badgePeriod;
+                delete node.badge; delete node.badgeType; delete node.badgeReason; delete node.badgePeriod; delete node.badgeGrantedBy;
                 if (b) {
                     node.badge = b.badge;
                     node.badgeType = b.badgeType;
                     if (b.badgePeriod) node.badgePeriod = b.badgePeriod;
                     if (b.badgeReason) node.badgeReason = b.badgeReason;
+                    if (b.badgeGrantedBy) node.badgeGrantedBy = b.badgeGrantedBy;
                 }
             }
             if (node.children) node.children.forEach(applyBadgeEdits);
@@ -1968,6 +1969,7 @@
             const badgeHtml = node.badge
                 ? `<div class="detail-row"><dt>Distintivo</dt><dd>${node.badgeType === 'ai' ? '🤖' : '🏅'} ${escapeHtml(node.badge)}` +
                   `${node.badgePeriod ? ' · ' + escapeHtml(node.badgePeriod) : ''}` +
+                  `${node.badgeGrantedBy ? `<div style="color:#64748b;margin-top:3px;">Otorgado por: ${escapeHtml(node.badgeGrantedBy)}</div>` : ''}` +
                   `${node.badgeReason ? `<div style="color:#8a6d00;font-style:italic;margin-top:3px;">${escapeHtml(node.badgeReason)}</div>` : ''}</dd></div>`
                 : '';
 
@@ -2789,11 +2791,12 @@
                     const ok = await showConfirmModal(
                         `${node.name} ya tiene el distintivo "${node.badge}". ¿Reemplazarlo por AI Champion?`);
                     if (!ok) return;
-                } else {
-                    const ok = await showConfirmModal(`¿Nombrar AI Champion a ${node.name}?`);
-                    if (!ok) return;
                 }
-                badgeEdits[personKey] = { badge: 'AI Champion', badgeType: 'ai' };
+                const datos = await showPromptModal(`Nombrar AI Champion a ${node.name}`, [
+                    { label: '¿Quién otorga el distintivo? (tu nombre)', type: 'text' }
+                ]);
+                if (!datos) return;
+                badgeEdits[personKey] = { badge: 'AI Champion', badgeType: 'ai', badgeGrantedBy: datos[0] };
             }
             localStorage.setItem(BADGE_EDITS_KEY, JSON.stringify(badgeEdits));
             location.reload();
@@ -2933,6 +2936,7 @@
                 total,
                 node.badge || '',
                 node.badgePeriod || '',
+                node.badgeGrantedBy || '',
                 recognitions,
                 node.vacant ? 'Sí' : 'No'
             ]);
@@ -2951,7 +2955,7 @@
                     'Nivel', 'Nombre', 'Puesto', 'Departamento', 'Reporta a',
                     'Fecha de ingreso', 'Antigüedad', 'A qué se dedica',
                     'Reportes directos', 'Total a cargo',
-                    'Distintivo', 'Periodo del distintivo', 'Reconocimientos recibidos', 'Vacante'
+                    'Distintivo', 'Periodo del distintivo', 'Distintivo otorgado por', 'Reconocimientos recibidos', 'Vacante'
                 ];
                 const rows = flattenOrgForExport(ORG_DATA);
                 const csv = [headers, ...rows]
