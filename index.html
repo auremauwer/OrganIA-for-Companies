@@ -1787,6 +1787,27 @@
         }
         applyStructureEdits();
 
+        // ---- Posiciones vacantes publicadas desde el modo edición (clic derecho > Publicar posición) ----
+        // Son nodos nuevos que no existen en ORG_DATA: se guardan como
+        // { "id único": { parentKey: "clave del jefe", role: "puesto" } } y se insertan
+        // como hijos de ese jefe antes de que corran los demás overrides, para que
+        // hereden color/área y puedan editarse igual que cualquier otra posición.
+        const NEW_POSITIONS_KEY = 'organia_new_positions';
+        let newPositions = loadOverrides(NEW_POSITIONS_KEY);
+
+        function applyNewPositions() {
+            Object.keys(newPositions).forEach(id => {
+                const info = newPositions[id];
+                const padre = findNodeByKeyIn(ORG_DATA, info.parentKey);
+                if (!padre || !info.role) return;
+                if (!padre.children) padre.children = [];
+                const clave = 'newpos_' + id;
+                if (padre.children.some(c => c._key === clave)) return;
+                padre.children.push({ role: info.role, vacant: true, _key: clave });
+            });
+        }
+        applyNewPositions();
+
         // ---- Posiciones marcadas como vacantes desde el modo edición ----
         const VACANT_EDITS_KEY = 'organia_vacant_edits';
         let vacantEdits = loadOverrides(VACANT_EDITS_KEY);
@@ -2592,7 +2613,7 @@
             resetEditsBtn.style.display = '';
         }
 
-        if (resetStructureBtn && (Object.keys(structureEdits).length > 0 || Object.keys(vacantEdits).length > 0)) {
+        if (resetStructureBtn && (Object.keys(structureEdits).length > 0 || Object.keys(vacantEdits).length > 0 || Object.keys(newPositions).length > 0)) {
             resetStructureBtn.style.display = '';
         }
 
@@ -2701,7 +2722,12 @@
             const opciones = [];
 
             if (node.vacant) {
-                opciones.push({ texto: '↩️ Restaurar persona', accion: () => toggleVacante(personKey, false) });
+                if (personKey.startsWith('newpos_')) {
+                    opciones.push({ texto: '🗑️ Eliminar posición publicada', accion: () => eliminarPosicionPublicada(personKey) });
+                } else {
+                    opciones.push({ texto: '↩️ Restaurar persona', accion: () => toggleVacante(personKey, false) });
+                }
+                opciones.push({ texto: '📢 Publicar posición', accion: () => crearVacante(personKey) });
             } else {
                 opciones.push({ texto: '✏️ Editar datos', accion: () => abrirEditor(personKey) });
                 opciones.push({ texto: '📷 Cargar foto', accion: () => startPhotoUpload(personKey) });
@@ -2710,6 +2736,7 @@
                     texto: node.badge === 'AI Champion' ? '🤖 Quitar distintivo AI Champion' : '🤖 Nombrar AI Champion',
                     accion: () => toggleChampion(personKey)
                 });
+                opciones.push({ texto: '📢 Publicar posición', accion: () => crearVacante(personKey) });
                 opciones.push({ texto: '💼 Marcar como vacante', accion: () => toggleVacante(personKey, true) });
             }
 
@@ -2954,6 +2981,36 @@
             location.reload();
         }
 
+        // Crea una posición vacante nueva como reporte directo de personKey (publicar posición abierta)
+        async function crearVacante(personKey) {
+            const jefe = findNodeByKeyIn(ORG_DATA, personKey);
+            if (!jefe) return;
+            const nombreJefe = jefe.vacant ? jefe.role : jefe.name;
+            const datos = await showPromptModal(`Publicar posición bajo ${nombreJefe}`, [
+                { label: 'Puesto de la nueva posición', type: 'text' }
+            ]);
+            if (!datos || !datos[0] || !datos[0].trim()) return;
+
+            const id = 'id' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+            newPositions[id] = { parentKey: personKey, role: datos[0].trim() };
+            localStorage.setItem(NEW_POSITIONS_KEY, JSON.stringify(newPositions));
+            // Tras recargar, mostrar la posición recién creada
+            sessionStorage.setItem('organia_reveal', 'newpos_' + id);
+            location.reload();
+        }
+
+        // Elimina una posición publicada (creada con "Publicar posición"); no aplica a vacantes
+        // que vienen de una persona real marcada como vacante, esas se restauran, no se borran.
+        async function eliminarPosicionPublicada(personKey) {
+            const id = personKey.replace(/^newpos_/, '');
+            if (!newPositions[id]) return;
+            const ok = await showConfirmModal('¿Eliminar esta posición publicada? Esta acción no se puede deshacer con "Restaurar".');
+            if (!ok) return;
+            delete newPositions[id];
+            localStorage.setItem(NEW_POSITIONS_KEY, JSON.stringify(newPositions));
+            location.reload();
+        }
+
         // Otorga o quita el distintivo de AI Champion (los champions no llevan motivo)
         async function toggleChampion(personKey) {
             const node = findNodeByKeyIn(ORG_DATA, personKey);
@@ -3014,9 +3071,10 @@
         if (resetStructureBtn) {
             resetStructureBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
-                if (await showConfirmModal('¿Deshacer los cambios de estructura (movimientos de personas y posiciones marcadas como vacantes)?')) {
+                if (await showConfirmModal('¿Deshacer los cambios de estructura (movimientos de personas, posiciones marcadas como vacantes y posiciones publicadas)?')) {
                     localStorage.removeItem(STRUCTURE_EDITS_KEY);
                     localStorage.removeItem(VACANT_EDITS_KEY);
+                    localStorage.removeItem(NEW_POSITIONS_KEY);
                     location.reload();
                 }
             });
