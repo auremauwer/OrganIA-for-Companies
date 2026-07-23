@@ -1753,6 +1753,14 @@
                 const destino = findNodeByKeyIn(ORG_DATA, destinoKey);
                 if (!persona || !padreActual || !destino) return;
 
+                // conEquipo=false: su equipo actual NO la sigue, se queda reportando
+                // a quien era su jefe. Por omisión el equipo sí la acompaña.
+                const conEquipo = typeof edit === 'string' ? true : edit.conEquipo !== false;
+                const equipoPropio = persona.children || [];
+                if (!conEquipo && equipoPropio.length) {
+                    persona.children = [];
+                }
+
                 if (modo === 'reemplazo') {
                     // La persona toma el lugar del destino: hereda su jefe y su equipo,
                     // y el destino sale del organigrama.
@@ -1761,6 +1769,8 @@
                     const equipoHeredado = (destino.children || []).filter(c => keyOf(c) !== personaKey);
 
                     padreActual.children = padreActual.children.filter(c => keyOf(c) !== personaKey);
+                    if (!conEquipo && equipoPropio.length) padreActual.children.push(...equipoPropio);
+
                     persona.children = (persona.children || []).concat(equipoHeredado);
 
                     const idx = padreDestino.children.findIndex(c => keyOf(c) === destinoKey);
@@ -1769,6 +1779,7 @@
                 } else {
                     if (padreActual === destino) return;
                     padreActual.children = padreActual.children.filter(c => keyOf(c) !== personaKey);
+                    if (!conEquipo && equipoPropio.length) padreActual.children.push(...equipoPropio);
                     if (!destino.children) destino.children = [];
                     destino.children.push(persona);
                 }
@@ -2739,7 +2750,9 @@
 
         // Al soltar una tarjeta sobre otra hay dos intenciones posibles muy distintas;
         // se preguntan explícitamente para no adivinar por el usuario.
-        function preguntarModoMovimiento(nombrePersona, nombreDestino, opts) {
+        // Diálogo genérico de opciones en tarjetas grandes (se usa para el modo de
+        // movimiento y para decidir qué pasa con el equipo de la persona movida).
+        function preguntarOpciones(titulo, pregunta, opciones) {
             return new Promise((resolve) => {
                 const overlay = document.getElementById('appModal');
                 const titleEl = document.getElementById('appModalTitle');
@@ -2749,36 +2762,17 @@
                 const confirmBtn = document.getElementById('appModalConfirm');
                 const dialogEl = overlay.querySelector('.app-modal');
 
-                titleEl.textContent = `Mover a ${nombrePersona}`;
+                titleEl.textContent = titulo;
                 titleEl.style.display = 'block';
-                messageEl.textContent = `Soltaste a ${nombrePersona} sobre ${nombreDestino}. ¿Qué quieres hacer?`;
+                messageEl.textContent = pregunta;
                 messageEl.style.display = 'block';
                 dialogEl.className = 'app-modal';
                 confirmBtn.style.display = 'none';
                 cancelBtn.style.display = 'inline-block';
                 cancelBtn.textContent = 'Cancelar';
 
-                const opciones = [];
-                if (opts.permitirReporte) {
-                    opciones.push({
-                        modo: 'reporte',
-                        titulo: '➕ Agregar como reporte directo',
-                        detalle: `${nombrePersona} pasa a reportarle a ${nombreDestino}. ` +
-                                 `${nombreDestino} conserva su puesto y su equipo actual.`
-                    });
-                }
-                if (opts.permitirReemplazo) {
-                    opciones.push({
-                        modo: 'reemplazo',
-                        titulo: '🔄 Reemplazar en el puesto',
-                        detalle: `${nombrePersona} ocupa el lugar de ${nombreDestino}: hereda su jefe` +
-                                 (opts.equipoDestino ? ` y sus ${opts.equipoDestino} reportes directos` : '') +
-                                 `. ${nombreDestino} sale del organigrama.`
-                    });
-                }
-
-                fieldsEl.innerHTML = opciones.map((o, i) => `
-                    <button type="button" class="move-option" data-modo="${o.modo}">
+                fieldsEl.innerHTML = opciones.map(o => `
+                    <button type="button" class="move-option" data-valor="${escapeAttr(o.valor)}">
                         <span class="move-option-title">${o.titulo}</span>
                         <span class="move-option-detail">${escapeHtml(o.detalle)}</span>
                     </button>`).join('');
@@ -2794,7 +2788,7 @@
                 function onKeydown(e) { if (e.key === 'Escape') onCancel(); }
 
                 fieldsEl.querySelectorAll('.move-option').forEach(btn => {
-                    btn.addEventListener('click', () => cleanup(btn.dataset.modo));
+                    btn.addEventListener('click', () => cleanup(btn.dataset.valor));
                 });
                 cancelBtn.addEventListener('click', onCancel);
                 document.addEventListener('keydown', onKeydown);
@@ -2881,15 +2875,58 @@
             const esRaiz = keyOf(ORG_DATA) === destinoKey;
             const jefeActual = findParentOf(ORG_DATA, personaKey);
             const yaEsSuJefe = jefeActual && keyOf(jefeActual) === destinoKey;
+            const equipoDestino = (nuevoJefe.children || []).length;
 
-            const modo = await preguntarModoMovimiento(nombrePersona, nombreDestino, {
-                permitirReporte: !yaEsSuJefe,
-                permitirReemplazo: !esRaiz,
-                equipoDestino: (nuevoJefe.children || []).length
-            });
+            // Paso 1: ¿reporte directo o reemplazo?
+            const opcionesModo = [];
+            if (!yaEsSuJefe) {
+                opcionesModo.push({
+                    valor: 'reporte',
+                    titulo: '➕ Agregar como reporte directo',
+                    detalle: `${nombrePersona} pasa a reportarle a ${nombreDestino}. ` +
+                             `${nombreDestino} conserva su puesto y su equipo actual.`
+                });
+            }
+            if (!esRaiz) {
+                opcionesModo.push({
+                    valor: 'reemplazo',
+                    titulo: '🔄 Reemplazar en el puesto',
+                    detalle: `${nombrePersona} ocupa el lugar de ${nombreDestino}: hereda su jefe` +
+                             (equipoDestino ? ` y sus ${equipoDestino} reportes directos` : '') +
+                             `. ${nombreDestino} sale del organigrama.`
+                });
+            }
+            const modo = await preguntarOpciones(
+                `Mover a ${nombrePersona}`,
+                `Soltaste a ${nombrePersona} sobre ${nombreDestino}. ¿Qué quieres hacer?`,
+                opcionesModo);
             if (!modo) return;
 
-            structureEdits[personaKey] = { destino: destinoKey, modo };
+            // Paso 2: solo si la persona trae equipo, ¿se lo lleva o se queda?
+            let conEquipo = true;
+            const equipoPropio = (persona.children || []).length;
+            if (equipoPropio > 0) {
+                const nombreJefeActual = jefeActual ? (jefeActual.vacant ? jefeActual.role : jefeActual.name) : 'su jefe actual';
+                const decision = await preguntarOpciones(
+                    `El equipo de ${nombrePersona}`,
+                    `${nombrePersona} tiene ${equipoPropio} ${equipoPropio === 1 ? 'reporte directo' : 'reportes directos'}. ¿Qué hacemos con ${equipoPropio === 1 ? 'esa persona' : 'ellos'}?`,
+                    [
+                        {
+                            valor: 'si',
+                            titulo: '👥 Se va con ella',
+                            detalle: `Su equipo la acompaña y sigue reportándole en el nuevo puesto.`
+                        },
+                        {
+                            valor: 'no',
+                            titulo: '📌 Se queda donde está',
+                            detalle: `Solo se mueve ${nombrePersona}. Su equipo pasa a reportarle a ${nombreJefeActual}.`
+                        }
+                    ]);
+                if (!decision) return;
+                conEquipo = decision === 'si';
+            }
+
+            structureEdits[personaKey] = { destino: destinoKey, modo, conEquipo };
             localStorage.setItem(STRUCTURE_EDITS_KEY, JSON.stringify(structureEdits));
             // Tras recargar, mostrar a la persona ya colgando de su nuevo jefe
             sessionStorage.setItem('organia_reveal', personaKey);
