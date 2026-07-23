@@ -1745,6 +1745,27 @@
         applyFieldEdits(ORG_DATA);
         applyVacantEdits(ORG_DATA);
 
+        // Distintivos otorgados o quitados desde el modo edición.
+        // Valor por persona: { badge, badgeType } para otorgar, o null para quitar el que traiga de base.
+        const BADGE_EDITS_KEY = 'organia_badge_edits';
+        let badgeEdits = loadOverrides(BADGE_EDITS_KEY);
+
+        function applyBadgeEdits(node) {
+            const k = keyOf(node);
+            if (k && Object.prototype.hasOwnProperty.call(badgeEdits, k)) {
+                const b = badgeEdits[k];
+                delete node.badge; delete node.badgeType; delete node.badgeReason; delete node.badgePeriod;
+                if (b) {
+                    node.badge = b.badge;
+                    node.badgeType = b.badgeType;
+                    if (b.badgePeriod) node.badgePeriod = b.badgePeriod;
+                    if (b.badgeReason) node.badgeReason = b.badgeReason;
+                }
+            }
+            if (node.children) node.children.forEach(applyBadgeEdits);
+        }
+        applyBadgeEdits(ORG_DATA);
+
         // Fotos subidas manualmente por persona (independiente de si los datos son propios o de ejemplo)
         const PHOTO_OVERRIDES_KEY = 'organia_photo_overrides';
         let photoOverrides = loadOverrides(PHOTO_OVERRIDES_KEY);
@@ -2487,7 +2508,7 @@
             resetRecognitionsBtn.style.display = '';
         }
 
-        if (resetEditsBtn && Object.keys(fieldEdits).length > 0) {
+        if (resetEditsBtn && (Object.keys(fieldEdits).length > 0 || Object.keys(badgeEdits).length > 0)) {
             resetEditsBtn.style.display = '';
         }
 
@@ -2605,6 +2626,10 @@
                 opciones.push({ texto: '✏️ Editar datos', accion: () => abrirEditor(personKey) });
                 opciones.push({ texto: '📷 Cargar foto', accion: () => startPhotoUpload(personKey) });
                 opciones.push({ texto: '🙌 Reconocer', accion: () => abrirReconocimiento(personKey) });
+                opciones.push({
+                    texto: node.badge === 'AI Champion' ? '🤖 Quitar distintivo AI Champion' : '🤖 Nombrar AI Champion',
+                    accion: () => toggleChampion(personKey)
+                });
                 opciones.push({ texto: '💼 Marcar como vacante', accion: () => toggleVacante(personKey, true) });
             }
 
@@ -2750,6 +2775,30 @@
             location.reload();
         }
 
+        // Otorga o quita el distintivo de AI Champion (los champions no llevan motivo)
+        async function toggleChampion(personKey) {
+            const node = findNodeByKeyIn(ORG_DATA, personKey);
+            if (!node) return;
+
+            if (node.badge === 'AI Champion') {
+                const ok = await showConfirmModal(`¿Quitar el distintivo AI Champion a ${node.name}?`);
+                if (!ok) return;
+                badgeEdits[personKey] = null;
+            } else {
+                if (node.badge) {
+                    const ok = await showConfirmModal(
+                        `${node.name} ya tiene el distintivo "${node.badge}". ¿Reemplazarlo por AI Champion?`);
+                    if (!ok) return;
+                } else {
+                    const ok = await showConfirmModal(`¿Nombrar AI Champion a ${node.name}?`);
+                    if (!ok) return;
+                }
+                badgeEdits[personKey] = { badge: 'AI Champion', badgeType: 'ai' };
+            }
+            localStorage.setItem(BADGE_EDITS_KEY, JSON.stringify(badgeEdits));
+            location.reload();
+        }
+
         if (photoUploadInput) {
             photoUploadInput.addEventListener('change', async function(e) {
                 const file = e.target.files[0];
@@ -2796,8 +2845,9 @@
         if (resetEditsBtn) {
             resetEditsBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
-                if (await showConfirmModal('¿Deshacer todas las correcciones de datos que hiciste (nombres, puestos, descripciones)?')) {
+                if (await showConfirmModal('¿Deshacer todas las correcciones de datos que hiciste (nombres, puestos, descripciones y distintivos)?')) {
                     localStorage.removeItem(FIELD_EDITS_KEY);
+                    localStorage.removeItem(BADGE_EDITS_KEY);
                     location.reload();
                 }
             });
