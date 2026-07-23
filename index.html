@@ -1636,11 +1636,19 @@
         // Identidad estable para los cambios guardados: el nombre ORIGINAL de los datos base.
         // Así, aunque se corrija el nombre desde el modo edición, la foto y los reconocimientos
         // de esa persona siguen apuntando a ella.
-        function assignKeys(node) {
-            if (node.name) node._key = node.name;
-            if (node.children) node.children.forEach(assignKeys);
+        // Los homónimos reciben claves distintas ("Nombre (2)", "(3)"...): si dos personas
+        // se llamaran igual y la clave fuera solo el nombre, mover/editar a una afectaría
+        // a la otra. La primera aparición conserva el nombre tal cual (compatibilidad con
+        // fotos y ediciones ya guardadas).
+        function assignKeys(node, vistos) {
+            if (node.name) {
+                const n = (vistos.get(node.name) || 0) + 1;
+                vistos.set(node.name, n);
+                node._key = n === 1 ? node.name : `${node.name} (${n})`;
+            }
+            if (node.children) node.children.forEach(c => assignKeys(c, vistos));
         }
-        assignKeys(ORG_DATA);
+        assignKeys(ORG_DATA, new Map());
 
         function keyOf(node) {
             return node._key || node.name || null;
@@ -2759,6 +2767,8 @@
 
             structureEdits[personaKey] = destinoKey;
             localStorage.setItem(STRUCTURE_EDITS_KEY, JSON.stringify(structureEdits));
+            // Tras recargar, mostrar a la persona ya colgando de su nuevo jefe
+            sessionStorage.setItem('organia_reveal', personaKey);
             location.reload();
         });
 
@@ -3187,6 +3197,32 @@
             if (wrapper && st.wrapperScrollLeft) wrapper.scrollLeft = st.wrapperScrollLeft;
             if (st.scrollY) window.scrollTo(0, st.scrollY);
             refreshMinimap();
+        })();
+
+        // Tras mover a alguien (arrastrar y soltar), mostrarla resaltada bajo su nuevo jefe
+        // para que sea evidente que quedó como reporte y no "desapareció" en una rama cerrada.
+        (function revelarPersonaMovida() {
+            const personKey = sessionStorage.getItem('organia_reveal');
+            if (!personKey) return;
+            sessionStorage.removeItem('organia_reveal');
+
+            const vistaActiva = document.querySelector('.view-toggle-btn.active')?.dataset.view || 'list';
+
+            if (vistaActiva === 'chart') {
+                const card = Array.from(document.querySelectorAll('#orgTreeRoot .org-card[data-node-key]'))
+                    .find(c => c.getAttribute('data-node-key') === personKey);
+                if (!card) return;
+                const li = card.closest('li');
+                if (li) revealTreeNode(li);
+                refreshMinimap();
+                setTimeout(() => flashHighlight(card), 100);
+            } else {
+                const fila = Array.from(document.querySelectorAll('#listView .org-position[data-node-key]'))
+                    .find(p => p.getAttribute('data-node-key') === personKey);
+                if (!fila) return;
+                revealListRow(fila);
+                setTimeout(() => flashHighlight(fila), 100);
+            }
         })();
     </script>
 </body>
