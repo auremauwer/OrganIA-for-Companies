@@ -1876,7 +1876,7 @@
         }
 
         function getDepartments(node, depts = new Set()) {
-            if (node.team) depts.add(node.team);
+            if (node.displayTeam || node.team) depts.add(node.displayTeam || node.team);
             if (node.children) {
                 node.children.forEach(child => getDepartments(child, depts));
             }
@@ -2068,7 +2068,7 @@
                     </div>
                 </div>
                 <div class="detail-rows">
-                    ${detailRow('Departamento', node.team)}
+                    ${detailRow('Departamento', node.displayTeam || node.team)}
                     ${detailRow('Reporta a', jefe ? (jefe.vacant ? jefe.role : jefe.name) : '—')}
                     ${node.vacant ? detailRow('Estado', 'Posición vacante') : ''}
                     ${detailRow('Antigüedad', tenure)}
@@ -2142,7 +2142,7 @@
                                 <div class="org-tag-value">${node.role}</div>
                             </div>
                         </div>
-                        ${node.team ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.team}</div>` : ''}
+                        ${(node.displayTeam || node.team) ? `<div class="org-tag-value" style="color:#999;font-size:0.75rem;margin-top:8px;">${node.displayTeam || node.team}</div>` : ''}
                         ${badge}
                         ${moreInfoBtnHtml(node)}
                     </div>
@@ -2178,7 +2178,7 @@
             // Devuelve el <div class="list-node"> de este nodo, o null si ya se insertó
             // directamente en la raíz de su propia sección (para que el padre no lo duplique).
             function buildListNode(node, parentDept = null, depth = 0, parentName = null) {
-                const dept = node.team || parentDept;
+                const dept = node.displayTeam || node.team || parentDept;
                 if (!dept) return null;
 
                 const isNewSection = !sections[dept];
@@ -2272,14 +2272,20 @@
 
         // Propagar colores de Chiefs a subordinados (debe ejecutarse ANTES de renderizar,
         // para que las tarjetas ya nazcan con el color heredado del Chief de su rama)
-        function inheritAccents(node, chiefAccent = null) {
-            const accent = node.accent || chiefAccent;
-            node.displayAccent = accent;
+        // El color y el área los define el Chief al que pertenece la rama (nivel 1),
+        // no el valor que el nodo traiga de origen. Así, al pasar a alguien de un Chief
+        // a otro, toma el color y el área de su nuevo Chief en lugar de conservar el viejo.
+        function inheritAccents(node, colorRama, areaRama, depth = 0) {
+            const defineRama = depth <= 1;   // 0 = CEO, 1 = Chiefs y staff directo
+            const color = defineRama ? (node.accent || colorRama) : colorRama;
+            const area = defineRama ? (node.team || areaRama) : (areaRama || node.team);
+            node.displayAccent = color;
+            node.displayTeam = area;
             if (node.children) {
-                node.children.forEach(child => inheritAccents(child, accent));
+                node.children.forEach(child => inheritAccents(child, color, area, depth + 1));
             }
         }
-        inheritAccents(ORG_DATA);
+        inheritAccents(ORG_DATA, null, null, 0);
 
         // Renderizar vistas
         document.getElementById('orgTreeRoot').appendChild(buildTreeNode(ORG_DATA));
@@ -3058,7 +3064,7 @@
         function limpiarParaExportar(node) {
             const copia = {};
             Object.keys(node).forEach(k => {
-                if (k === '_key' || k === 'displayAccent' || k === 'children') return;
+                if (k === '_key' || k === 'displayAccent' || k === 'displayTeam' || k === 'children') return;
                 copia[k] = node[k];
             });
             if (node.children) copia.children = node.children.map(limpiarParaExportar);
@@ -3087,7 +3093,7 @@
         }
 
         function flattenOrgForExport(node, parentName = null, parentDept = null, level = 1, rows = []) {
-            const dept = node.team || parentDept || '';
+            const dept = node.displayTeam || node.team || parentDept || '';
             const directs = node.children ? node.children.length : 0;
             const total = (node.children && node.children.length) ? countEmployees({ children: node.children }) : 0;
             const recognitions = (node.recognitions || [])
