@@ -1,0 +1,6 @@
+# Secreto HMAC de las cookies de sesion: nunca debe entrar al repositorio
+.secreto-sesion
+# Artefacto generado por edge-auth/construir.sh
+edge-auth-build/
+# Plantilla intermedia que produce 'aws cloudformation package'
+organia-empaquetado.yaml

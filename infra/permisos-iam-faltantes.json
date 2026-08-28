@@ -1,0 +1,46 @@
+{
+  "_comentario": [
+    "Politica minima que le falta al usuario openbank-ia-deploy para poder",
+    "administrar por si solo el rol de la funcion de borde de OrganIA.",
+    "Esta acotada a roles que empiecen con 'organia-': no da permiso sobre",
+    "ningun otro rol de la cuenta.",
+    "",
+    "Alternativa si no se quiere ampliar el usuario de despliegue: que un",
+    "administrador cree el rol una sola vez y se pase su ARN por parametro",
+    "(ver infra/README.md). En ese caso esta politica no hace falta."
+  ],
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AdministrarSoloElRolDeOrganIA",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:DeleteRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListRoleTags",
+        "iam:UpdateAssumeRolePolicy"
+      ],
+      "Resource": "arn:aws:iam::237921649041:role/organia-*"
+    },
+    {
+      "Sid": "EntregarElRolALambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::237921649041:role/organia-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": [
+            "lambda.amazonaws.com",
+            "edgelambda.amazonaws.com"
+          ]
+        }
+      }
+    }
+  ]
+}

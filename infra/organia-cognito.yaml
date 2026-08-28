@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  OrganIA - Identidad. Pool de usuarios con segundo factor TOTP obligatorio
+  (Microsoft Authenticator o cualquier app compatible).
+  Stack separado, igual que comparador-cognito en esta cuenta.
+
+  Cuando el equipo de identidad tenga listo el registro de aplicacion, se
+  agrega el proveedor federado a ESTE mismo pool sin tocar CloudFront.
+
+Parameters:
+
+  NombreProyecto:
+    Type: String
+    Default: organia
+    Description: Valor de la etiqueta Project (activada para costos).
+
+  Entorno:
+    Type: String
+    Default: prod
+    AllowedValues: [prod, dev]
+    Description: Valor de la etiqueta Environment (activada para costos).
+
+  Propietario:
+    Type: String
+    Default: aure
+    Description: Valor de la etiqueta Owner.
+
+  DominioCloudFront:
+    Type: String
+    Description: >
+      Dominio de la distribucion, sin https:// (ej. d3xk2p9qhm4vs1.cloudfront.net).
+      Sale de la salida UrlSitio del stack organia, que se crea primero.
+
+  PrefijoDominioLogin:
+    Type: String
+    Default: organia-login
+    Description: >
+      Prefijo del dominio de la pantalla de acceso. Debe ser unico en toda
+      la region, por eso lleva sufijo con el id de cuenta.
+
+Resources:
+
+  # ---------------------------------------------------------------
+  # Directorio de usuarios.
+  # Sin auto-registro: las altas las hace un administrador. Es una
+  # herramienta interna, no un servicio al que la gente se suscribe.
+  # ---------------------------------------------------------------
+  PoolUsuarios:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${NombreProyecto}-usuarios'
+
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+        InviteMessageTemplate:
+          EmailSubject: 'Tu acceso a OrganIA'
+          EmailMessage: >
+            Se te dio acceso al organigrama de OrganIA.<br><br>
+            Usuario: <b>{username}</b><br>
+            Contrasena temporal: <b>{####}</b><br><br>
+            Al entrar por primera vez se te pedira cambiarla y escanear un
+            codigo QR con Microsoft Authenticator para el segundo factor.
+
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+
+      # Segundo factor obligatorio. Solo TOTP: no se habilita SMS, que es
+      # el factor mas debil y ademas tiene costo por mensaje.
+      MfaConfiguration: 'ON'
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 3
+
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+      UserPoolTags:
+        Project: !Ref NombreProyecto
+        Environment: !Ref Entorno
+        Owner: !Ref Propietario
+        Componente: identidad
+
+  # ---------------------------------------------------------------
+  # Cliente confidencial: lleva secreto porque quien intercambia el
+  # codigo por el token es Lambda@Edge, no el navegador.
+  # ---------------------------------------------------------------
+  ClientePoolUsuarios:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub '${NombreProyecto}-cloudfront'
+      UserPoolId: !Ref PoolUsuarios
+      GenerateSecret: true
+
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      SupportedIdentityProviders: [COGNITO]
+
+      CallbackURLs:
+        - !Sub 'https://${DominioCloudFront}/_auth/callback'
+      LogoutURLs:
+        - !Sub 'https://${DominioCloudFront}/'
+
+      # Sesion de un dia laboral; despues se vuelve a pedir el factor.
+      AccessTokenValidity: 8
+      IdTokenValidity: 8
+      RefreshTokenValidity: 1
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+
+  DominioLogin:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref PoolUsuarios
+      Domain: !Sub '${PrefijoDominioLogin}-${AWS::AccountId}'
+
+Outputs:
+
+  IdPool:
+    Description: Id del pool. Lambda@Edge lo necesita para validar los tokens.
+    Value: !Ref PoolUsuarios
+
+  IdCliente:
+    Description: Id del cliente de CloudFront.
+    Value: !Ref ClientePoolUsuarios
+
+  UrlLogin:
+    Description: Pantalla de acceso alojada por Cognito.
+    Value: !Sub 'https://${PrefijoDominioLogin}-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com'
+
+  ComandoSecreto:
+    Description: >
+      El secreto del cliente no se expone como salida por seguridad.
+      Se consulta con este comando.
+    Value: !Sub >-
+      aws cognito-idp describe-user-pool-client
+      --user-pool-id ${PoolUsuarios}
+      --client-id ${ClientePoolUsuarios}
+      --query 'UserPoolClient.ClientSecret' --output text
+      --profile openbank --region ${AWS::Region}

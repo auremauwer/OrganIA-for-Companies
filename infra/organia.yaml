@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  OrganIA - Hospedaje del organigrama interactivo.
+  Bucket privado servido por CloudFront mediante Origin Access Control.
+  Sigue el patron de openbank-ia y comparador-app en esta cuenta.
+
+Parameters:
+
+  NombreProyecto:
+    Type: String
+    Default: organia
+    Description: >
+      Prefijo para nombrar los recursos y valor de la etiqueta Project.
+      'Project' y 'Environment' son las dos etiquetas activadas para
+      asignacion de costos en esta cuenta; por eso las llaves van en
+      ingles aunque el resto de la plantilla este en espanol.
+
+  Entorno:
+    Type: String
+    Default: prod
+    AllowedValues: [prod, dev]
+    Description: Valor de la etiqueta Environment.
+
+  Propietario:
+    Type: String
+    Default: aure
+    Description: >
+      Valor de la etiqueta Owner. Sigue la convencion de alertia-stack.
+      Ojo: Owner NO esta activada para asignacion de costos, asi que
+      sirve para identificar pero todavia no para desglosar el gasto.
+
+  ConAutenticacion:
+    Type: String
+    Default: 'no'
+    AllowedValues: ['si', 'no']
+    Description: >
+      Enciende el guardia de acceso en el borde. Va en 'no' en el primer
+      despliegue porque Cognito todavia no existe: su cliente necesita
+      saber la URL de retorno, que solo se conoce una vez creada esta
+      distribucion. Se pone en 'si' en el tercer paso.
+
+  CorreoPresupuesto:
+    Type: String
+    Description: Correo que recibe la alerta cuando el gasto se acerca al limite.
+
+  LimitePresupuestoUSD:
+    Type: Number
+    Default: 5
+    Description: >
+      Tope mensual en dolares. El sitio pesa 200 KB, asi que el gasto real
+      esperado esta por debajo de 2 USD; el tope solo sirve de alarma.
+
+  ArnRolGuardia:
+    Type: String
+    Default: ''
+    Description: >
+      ARN de un rol ya existente para la funcion de borde. Si se deja vacio,
+      la plantilla intenta crearlo, lo que exige permisos de IAM que el
+      usuario de despliegue puede no tener. Ver infra/README.md.
+
+Conditions:
+
+  ProtegerSitio: !Equals [!Ref ConAutenticacion, 'si']
+
+  # Solo se intenta crear el rol si no nos dieron uno hecho.
+  CrearRol: !And
+    - !Condition ProtegerSitio
+    - !Equals [!Ref ArnRolGuardia, '']
+
+Resources:
+
+  # ---------------------------------------------------------------
+  # Almacenamiento. El bucket nunca se expone directamente: todo el
+  # acceso pasa por CloudFront usando Origin Access Control.
+  # ---------------------------------------------------------------
+  BucketFrontend:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub '${NombreProyecto}-frontend-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Project
+          Value: !Ref NombreProyecto
+        - Key: Environment
+          Value: !Ref Entorno
+        - Key: Owner
+          Value: !Ref Propietario
+        - Key: Componente
+          Value: frontend
+
+  PoliticaBucketFrontend:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketFrontend
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Solo esta distribucion de CloudFront puede leer el bucket.
+          - Sid: PermitirLecturaSoloDesdeCloudFront
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub '${BucketFrontend.Arn}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribucion}'
+          # Rechaza cualquier acceso que no viaje cifrado.
+          - Sid: NegarTraficoSinTLS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt BucketFrontend.Arn
+              - !Sub '${BucketFrontend.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+  # ---------------------------------------------------------------
+  # Distribucion
+  # ---------------------------------------------------------------
+  AccesoOrigenS3:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${NombreProyecto}-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  EncabezadosSeguridad:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${NombreProyecto}-encabezados-seguridad'
+        SecurityHeadersConfig:
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: same-origin
+            Override: true
+          ContentSecurityPolicy:
+            # El organigrama es autocontenido: no carga scripts ni datos
+            # de terceros. Las fuentes solo hacen falta si se agregan.
+            ContentSecurityPolicy: >-
+              default-src 'self';
+              img-src 'self' data:;
+              style-src 'self' 'unsafe-inline';
+              script-src 'self' 'unsafe-inline';
+              connect-src 'self';
+              frame-ancestors 'none'
+            Override: true
+
+  Distribucion:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub '${NombreProyecto} - organigrama interactivo'
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        DefaultRootObject: index.html
+        # PriceClass_100 = Norteamerica y Europa. El publico es interno.
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: OrigenS3
+            DomainName: !GetAtt BucketFrontend.RegionalDomainName
+            OriginAccessControlId: !GetAtt AccesoOrigenS3.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: OrigenS3
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          # CachingOptimized, politica administrada por AWS.
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: !Ref EncabezadosSeguridad
+          # El guardia corre en viewer-request: antes de mirar la cache y
+          # antes de tocar S3. Si corriera en origin-request, una respuesta
+          # ya cacheada se serviria sin pasar por la validacion.
+          LambdaFunctionAssociations: !If
+            - ProtegerSitio
+            - - EventType: viewer-request
+                LambdaFunctionARN: !Ref VersionGuardiaAcceso
+                IncludeBody: false
+            - !Ref 'AWS::NoValue'
+      # Tags va bajo Properties, no dentro de DistributionConfig.
+      Tags:
+        - Key: Project
+          Value: !Ref NombreProyecto
+        - Key: Environment
+          Value: !Ref Entorno
+        - Key: Owner
+          Value: !Ref Propietario
+        - Key: Componente
+          Value: cdn
+
+  # ---------------------------------------------------------------
+  # Guardia de acceso en el borde.
+  # Se crea solo cuando ConAutenticacion=si.
+  # ---------------------------------------------------------------
+  RolGuardiaAcceso:
+    Type: AWS::IAM::Role
+    Condition: CrearRol
+    Properties:
+      RoleName: !Sub '${NombreProyecto}-guardia-acceso'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              # Lambda@Edge exige AMBOS principales: uno para la funcion
+              # y otro para las replicas que CloudFront distribuye.
+              Service:
+                - lambda.amazonaws.com
+                - edgelambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Project
+          Value: !Ref NombreProyecto
+        - Key: Environment
+          Value: !Ref Entorno
+        - Key: Owner
+          Value: !Ref Propietario
+        - Key: Componente
+          Value: edge-auth
+
+  GuardiaAcceso:
+    Type: AWS::Lambda::Function
+    Condition: ProtegerSitio
+    Properties:
+      FunctionName: !Sub '${NombreProyecto}-guardia-acceso'
+      Description: Valida la sesion antes de servir el organigrama.
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !If [CrearRol, !GetAtt RolGuardiaAcceso.Arn, !Ref ArnRolGuardia]
+      # Lambda@Edge en viewer-request: maximo 5 s y 128 MB.
+      Timeout: 5
+      MemorySize: 128
+      Code: ./edge-auth-build
+      Tags:
+        - Key: Project
+          Value: !Ref NombreProyecto
+        - Key: Environment
+          Value: !Ref Entorno
+        - Key: Owner
+          Value: !Ref Propietario
+        - Key: Componente
+          Value: edge-auth
+
+  # CloudFront no acepta $LATEST: necesita una version inmutable.
+  VersionGuardiaAcceso:
+    Type: AWS::Lambda::Version
+    Condition: ProtegerSitio
+    Properties:
+      FunctionName: !Ref GuardiaAcceso
+
+  # ---------------------------------------------------------------
+  # Presupuesto, igual que en los demas stacks de la cuenta.
+  # ---------------------------------------------------------------
+  Presupuesto:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub '${NombreProyecto}-mensual'
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref LimitePresupuestoUSD
+          Unit: USD
+        CostFilters:
+          # Debe apuntar a una etiqueta ACTIVADA para asignacion de costos.
+          # 'Project' lo esta; 'Proyecto' no existe en facturacion.
+          TagKeyValue:
+            - !Sub 'user:Project$${NombreProyecto}'
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref CorreoPresupuesto
+
+Outputs:
+
+  NombreBucket:
+    Description: Bucket donde se suben index.html y las fotos.
+    Value: !Ref BucketFrontend
+
+  IdDistribucion:
+    Description: Se usa para invalidar la cache al desplegar.
+    Value: !Ref Distribucion
+
+  UrlSitio:
+    Description: Direccion publica del organigrama.
+    Value: !Sub 'https://${Distribucion.DomainName}'
