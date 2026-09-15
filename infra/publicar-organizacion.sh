@@ -37,8 +37,10 @@ BUCKET="$(leer_salida NombreBucket)"
 DIST="$(leer_salida IdDistribucion)"
 URL="$(leer_salida UrlSitio)"
 
-# Revision minima antes de publicar: que traiga encabezado y al menos una fila
-FILAS=$(($(wc -l < "$ORIGEN") - 1))
+# Revision minima antes de publicar: que traiga encabezado y al menos una fila.
+# Se cuenta con grep -c porque 'wc -l' cuenta saltos de linea, y se quedaria
+# corto por uno cuando el archivo no termina en salto.
+FILAS=$(($(grep -c '' "$ORIGEN") - 1))
 if [[ "$FILAS" -lt 1 ]]; then
   echo "El archivo no tiene filas de datos." >&2
   exit 1
@@ -62,6 +64,13 @@ if [[ -d photos ]] && [[ -n "$(ls -A photos 2>/dev/null)" ]]; then
     --profile "$PERFIL" --region "$REGION" \
     --cache-control 'no-cache, must-revalidate' \
     --delete
+
+  # 'sync' omite las fotos que no cambiaron, y esas conservarian los
+  # encabezados con los que se subieron la primera vez.
+  aws s3 cp "s3://$BUCKET/photos/" "s3://$BUCKET/photos/" \
+    --recursive --metadata-directive REPLACE \
+    --profile "$PERFIL" --region "$REGION" \
+    --cache-control 'no-cache, must-revalidate' >/dev/null
 fi
 
 echo "Invalidando cache..."

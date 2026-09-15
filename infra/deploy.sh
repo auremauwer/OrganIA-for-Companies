@@ -41,6 +41,14 @@ aws s3 sync photos/ "s3://$BUCKET/photos/" \
   --cache-control 'no-cache, must-revalidate' \
   --delete
 
+# 'sync' solo sube lo que cambio, asi que una foto que ya estaba en el bucket
+# conserva los encabezados con los que se subio la primera vez. Sin esta
+# pasada, corregir la cache no surtiria efecto sobre las fotos existentes.
+aws s3 cp "s3://$BUCKET/photos/" "s3://$BUCKET/photos/" \
+  --recursive --metadata-directive REPLACE \
+  --profile "$PERFIL" --region "$REGION" \
+  --cache-control 'no-cache, must-revalidate' >/dev/null
+
 echo "Subiendo la organizacion..."
 aws s3 cp organia-datos.csv "s3://$BUCKET/organia-datos.csv" \
   --profile "$PERFIL" --region "$REGION" \
