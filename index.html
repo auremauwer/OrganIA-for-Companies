@@ -14,15 +14,27 @@
         body {
             font-family: 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #f5f7fa;
-            color: #2c3e50;
+            color: #1f1f23;
         }
 
         header {
             position: relative;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #111113 0%, #2e2e33 100%);
             color: white;
-            padding: 40px 20px;
+            /* Encabezado delgado: el protagonista es el organigrama, no el titulo */
+            padding: 12px 20px 14px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Titulo y pestanas de vista comparten renglon para ahorrar altura */
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            /* Espacio a la derecha para que la tuerca no encime las pestanas */
+            padding-right: 52px;
+            margin-bottom: 10px;
         }
 
         .settings-gear-btn {
@@ -71,12 +83,12 @@
             padding: 8px 10px;
             border-radius: 5px;
             font-size: 0.8rem;
-            color: #2c3e50;
+            color: #1f1f23;
             cursor: pointer;
         }
 
         .settings-menu-item:hover {
-            background: #eef1f7;
+            background: #f0f0f2;
         }
 
         .settings-menu-item.reset-item {
@@ -94,15 +106,11 @@
         }
 
         h1 {
-            font-size: 2.2rem;
-            margin-bottom: 5px;
+            font-size: 1.35rem;
+            margin: 0;
             font-weight: 700;
-        }
-
-        .subtitle {
-            font-size: 1rem;
-            opacity: 0.95;
-            margin-bottom: 20px;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
         }
 
         .filters {
@@ -130,7 +138,7 @@
         }
 
         main {
-            padding: 40px 0;
+            padding: 16px 0;
         }
 
         .org-structure {
@@ -141,7 +149,7 @@
         }
 
         .department-section {
-            border-bottom: 1px solid #e5e9f0;
+            border-bottom: 1px solid #e8e8ea;
         }
 
         .department-section:last-child {
@@ -149,7 +157,7 @@
         }
 
         .dept-header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #111113 0%, #2e2e33 100%);
             color: white;
             padding: 20px;
             display: flex;
@@ -200,12 +208,12 @@
             background: #f8f9fa;
             border-radius: 8px;
             overflow: hidden;
-            border-left: 4px solid var(--row-accent, #2a5298);
+            border-left: 4px solid var(--row-accent, #2e2e33);
             transition: all 0.3s ease;
         }
 
         .org-position:hover {
-            box-shadow: 0 4px 12px rgba(42, 82, 152, 0.15);
+            box-shadow: 0 4px 12px rgba(46, 46, 51, 0.15);
             transform: translateX(4px);
         }
 
@@ -226,7 +234,7 @@
 
         .list-count-badge {
             display: inline-block;
-            background: var(--row-accent, #2a5298);
+            background: var(--row-accent, #2e2e33);
             color: white;
             font-size: 0.72rem;
             font-weight: 700;
@@ -237,7 +245,7 @@
 
         .reports-to {
             font-size: 0.75rem;
-            color: #9aa5b8;
+            color: #a8a8ae;
             margin-top: 2px;
             margin-bottom: 2px;
         }
@@ -268,7 +276,7 @@
         .person-name {
             font-size: 1.05rem;
             font-weight: 600;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 4px;
         }
 
@@ -280,7 +288,7 @@
 
         .position-expand {
             font-size: 1.5rem;
-            color: #2a5298;
+            color: #2e2e33;
             transition: transform 0.3s ease;
             cursor: pointer;
         }
@@ -307,7 +315,7 @@
 
         .member-tag {
             display: inline-block;
-            background: #2a5298;
+            background: #2e2e33;
             color: white;
             padding: 4px 10px;
             border-radius: 12px;
@@ -320,7 +328,7 @@
             padding: 15px 30px;
             background: #ecf0f7;
             font-weight: 600;
-            color: #1e3c72;
+            color: #111113;
             margin-top: 30px;
         }
 
@@ -341,7 +349,7 @@
 
         .member-name {
             font-weight: 600;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 4px;
         }
 
@@ -359,7 +367,7 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #111113 0%, #2e2e33 100%);
             color: white;
             padding: 25px;
             border-radius: 8px;
@@ -380,26 +388,33 @@
 
         .view-toggle {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .view-toggle-btn {
             background: rgba(255,255,255,0.15);
             color: white;
             border: 2px solid rgba(255,255,255,0.3);
-            padding: 8px 18px;
+            padding: 5px 14px;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             font-weight: 600;
             transition: all 0.3s ease;
+        }
+
+        /* Sin contrasena solo existe el organigrama: las demas vistas
+           aparecen al entrar en modo edicion. */
+        body:not(.edit-mode) .view-toggle-btn[data-view="list"],
+        body:not(.edit-mode) .view-toggle-btn[data-view="about"] {
+            display: none;
         }
 
         .view-toggle-btn:hover,
         .view-toggle-btn.active {
             background: white;
-            color: #1e3c72;
+            color: #111113;
             border-color: white;
         }
 
@@ -409,8 +424,27 @@
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             overflow-x: auto;
-            padding: 50px 30px;
-            min-height: 65vh;   /* aprovecha la altura de la pantalla */
+            padding: 30px;
+            min-height: 72vh;   /* aprovecha la altura de la pantalla */
+            /* El lienzo se mueve arrastrando con la manita, no con la barra */
+            cursor: grab;
+            scrollbar-width: none;        /* Firefox */
+            -ms-overflow-style: none;     /* Edge antiguo */
+        }
+
+        .chart-view-wrapper::-webkit-scrollbar {
+            display: none;                /* Chrome, Safari */
+        }
+
+        .chart-view-wrapper.arrastrando {
+            cursor: grabbing;
+            /* Evita que el navegador seleccione texto mientras se mueve el lienzo */
+            user-select: none;
+        }
+
+        /* Sobre una tarjeta el cursor indica que se puede pulsar, no arrastrar */
+        .chart-view-wrapper .org-card {
+            cursor: pointer;
         }
 
         .chart-toolbar {
@@ -426,9 +460,9 @@
             text-align: center;
             font-size: 0.85rem;
             font-weight: 700;
-            color: #2a5298;
+            color: #2e2e33;
             background: white;
-            border: 1px solid #e5e9f0;
+            border: 1px solid #e8e8ea;
             border-radius: 6px;
             padding: 8px 6px;
         }
@@ -440,7 +474,7 @@
             width: 170px;
             height: 120px;
             background: rgba(255,255,255,0.97);
-            border: 1px solid #d3d8e0;
+            border: 1px solid #d8d8dc;
             border-radius: 8px;
             box-shadow: 0 4px 14px rgba(0,0,0,0.18);
             overflow: hidden;
@@ -467,8 +501,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            border: 2px solid #2a5298;
-            background: rgba(42, 82, 152, 0.15);
+            border: 2px solid #2e2e33;
+            background: rgba(46, 46, 51, 0.15);
             pointer-events: none;
             border-radius: 2px;
         }
@@ -502,13 +536,13 @@
             right: 50%;
             width: 50%;
             height: 40px;
-            border-top: 2px solid #c3cedf;
+            border-top: 2px solid #d0d0d4;
         }
 
         .org-tree li::after {
             right: auto;
             left: 50%;
-            border-left: 2px solid #c3cedf;
+            border-left: 2px solid #d0d0d4;
         }
 
         .org-tree li:only-child {
@@ -529,7 +563,7 @@
         }
 
         .org-tree li:last-child::before {
-            border-right: 2px solid #c3cedf;
+            border-right: 2px solid #d0d0d4;
             border-radius: 0 6px 0 0;
         }
 
@@ -558,14 +592,14 @@
             left: 50%;
             width: 0;
             height: 40px;
-            border-left: 2px solid #c3cedf;
+            border-left: 2px solid #d0d0d4;
         }
 
         .org-card {
-            --accent: #2a5298;
+            --accent: #2e2e33;
             position: relative;
             background: white;
-            border: 1px solid #e5e9f0;
+            border: 1px solid #e8e8ea;
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             width: 190px;
@@ -597,7 +631,7 @@
         li.assistant-branch > .org-card {
             width: 165px;
             border: 2px dashed var(--accent);
-            background: #f8f9fb;
+            background: #f9f9fa;
             margin-top: 30px;
         }
 
@@ -680,7 +714,7 @@
 
         .org-staff-label {
             display: inline-block;
-            background: #eef1f7;
+            background: #f0f0f2;
             color: #64748b;
             font-size: 0.6rem;
             font-weight: 700;
@@ -693,8 +727,8 @@
 
         /* Posición vacante: aún no hay persona asignada. Siempre gris, sin importar el departamento. */
         .org-card.vacant-card {
-            background: #f4f5f7;
-            border: 1px solid #d3d8e0;
+            background: #f5f5f6;
+            border: 1px solid #d8d8dc;
         }
 
         .org-card.vacant-card .org-card-bar {
@@ -703,12 +737,12 @@
 
         .org-position.vacant-row {
             border-left-color: #b7c0cf;
-            background: #f4f5f7;
+            background: #f5f5f6;
         }
 
         .org-photo.vacant-photo {
             background: #e3e6eb;
-            border: 1px solid #d3d8e0;
+            border: 1px solid #d8d8dc;
         }
 
         .vacant-name {
@@ -736,7 +770,7 @@
             gap: 5px;
             margin-top: 10px;
             padding-top: 8px;
-            border-top: 1px dashed #e5e9f0;
+            border-top: 1px dashed #e8e8ea;
             color: var(--accent);
             font-size: 0.72rem;
             font-weight: 700;
@@ -809,7 +843,7 @@
         .org-card-name {
             font-weight: 700;
             font-size: 0.92rem;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 8px;
             line-height: 1.2;
         }
@@ -822,7 +856,7 @@
         }
 
         .org-tag-label {
-            background: #eef1f7;
+            background: #f0f0f2;
             color: #7f8c8d;
             font-weight: 700;
             padding: 1px 6px;
@@ -834,7 +868,7 @@
         }
 
         .org-tag-value {
-            color: #2c3e50;
+            color: #1f1f23;
             font-size: 0.78rem;
             line-height: 1.3;
         }
@@ -852,7 +886,7 @@
 
         .about-section h2 {
             font-size: 1.8rem;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 20px;
             font-weight: 700;
         }
@@ -875,11 +909,11 @@
             background: #f8f9fa;
             padding: 25px;
             border-radius: 8px;
-            border-left: 4px solid #2a5298;
+            border-left: 4px solid #2e2e33;
         }
 
         .value-card h3 {
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 10px;
             font-weight: 600;
         }
@@ -918,29 +952,29 @@
 
         .search-bar {
             background: white;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 8px 10px;
+            border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
+            margin-bottom: 0;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
             align-items: center;
         }
 
         .search-input {
             flex: 1;
-            min-width: 250px;
-            padding: 10px 15px;
-            border: 2px solid #e5e9f0;
+            min-width: 220px;
+            padding: 6px 12px;
+            border: 2px solid #e8e8ea;
             border-radius: 6px;
             font-size: 0.95rem;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #2a5298;
-            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+            border-color: #2e2e33;
+            box-shadow: 0 0 0 3px rgba(46, 46, 51, 0.1);
         }
 
         .control-btns {
@@ -949,10 +983,10 @@
         }
 
         .control-btn {
-            background: #2a5298;
+            background: #2e2e33;
             color: white;
             border: none;
-            padding: 10px 16px;
+            padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
@@ -960,7 +994,7 @@
         }
 
         .control-btn:hover {
-            background: #1e3c72;
+            background: #111113;
             transform: translateY(-2px);
         }
 
@@ -976,7 +1010,7 @@
 
         .photo-edit-notice {
             background: #e8f0fe;
-            color: #1e3c72;
+            color: #111113;
             border-color: #b7cdfb;
         }
 
@@ -1005,13 +1039,13 @@
         .app-modal-title {
             font-weight: 700;
             font-size: 1.05rem;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 12px;
         }
 
         .app-modal-message {
             font-size: 0.9rem;
-            color: #2c3e50;
+            color: #1f1f23;
             margin-bottom: 14px;
             line-height: 1.4;
         }
@@ -1032,7 +1066,7 @@
         .app-modal-field textarea {
             width: 100%;
             padding: 9px 11px;
-            border: 2px solid #e5e9f0;
+            border: 2px solid #e8e8ea;
             border-radius: 6px;
             font-size: 0.9rem;
             font-family: inherit;
@@ -1042,7 +1076,7 @@
         .app-modal-field input:focus,
         .app-modal-field textarea:focus {
             outline: none;
-            border-color: #2a5298;
+            border-color: #2e2e33;
         }
 
         .app-modal-actions {
@@ -1062,12 +1096,12 @@
         }
 
         .app-modal-btn.cancel {
-            background: #eef1f7;
+            background: #f0f0f2;
             color: #64748b;
         }
 
         .app-modal-btn.confirm {
-            background: #2a5298;
+            background: #2e2e33;
             color: white;
         }
 
@@ -1077,16 +1111,16 @@
         }
 
         body.edit-mode .org-photo[data-person]:hover {
-            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.45);
+            box-shadow: 0 0 0 3px rgba(46, 46, 51, 0.45);
         }
 
         .give-recognition-btn,
         .upload-photo-btn,
         .edit-person-btn {
             display: none;
-            background: #eef1f7;
-            color: #2a5298;
-            border: 1px dashed #b7c4dd;
+            background: #f0f0f2;
+            color: #2e2e33;
+            border: 1px dashed #c8c8ce;
             border-radius: 10px;
             padding: 2px 8px;
             font-size: 0.68rem;
@@ -1099,7 +1133,7 @@
         .give-recognition-btn:hover,
         .upload-photo-btn:hover,
         .edit-person-btn:hover {
-            background: #dde7fb;
+            background: #e4e4e8;
         }
 
         body.edit-mode .give-recognition-btn,
@@ -1123,9 +1157,9 @@
         }
 
         .more-info-btn:hover {
-            background: #eef1f7;
-            color: #2a5298;
-            border-color: #b7c4dd;
+            background: #f0f0f2;
+            color: #2e2e33;
+            border-color: #c8c8ce;
         }
 
         /* Panel de detalle de la persona */
@@ -1149,7 +1183,7 @@
         .detail-name {
             font-size: 1.15rem;
             font-weight: 700;
-            color: #1e3c72;
+            color: #111113;
             line-height: 1.2;
         }
 
@@ -1160,7 +1194,7 @@
         }
 
         .detail-rows {
-            border-top: 1px solid #eef1f7;
+            border-top: 1px solid #f0f0f2;
             padding-top: 12px;
         }
 
@@ -1181,7 +1215,7 @@
 
         .detail-row dd {
             margin: 0;
-            color: #2c3e50;
+            color: #1f1f23;
             line-height: 1.4;
         }
 
@@ -1191,7 +1225,7 @@
             gap: 6px;
             margin-top: 14px;
             padding-top: 12px;
-            border-top: 1px solid #eef1f7;
+            border-top: 1px solid #f0f0f2;
         }
 
         /* Menú contextual (clic derecho sobre una tarjeta, en modo edición) */
@@ -1200,8 +1234,8 @@
             display: block;
             width: 100%;
             text-align: left;
-            background: #f8f9fb;
-            border: 2px solid #e5e9f0;
+            background: #f9f9fa;
+            border: 2px solid #e8e8ea;
             border-radius: 8px;
             padding: 12px 14px;
             margin-bottom: 10px;
@@ -1210,7 +1244,7 @@
         }
 
         .move-option:hover {
-            border-color: #2a5298;
+            border-color: #2e2e33;
             background: #eef3fb;
         }
 
@@ -1218,7 +1252,7 @@
             display: block;
             font-size: 0.92rem;
             font-weight: 700;
-            color: #1e3c72;
+            color: #111113;
             margin-bottom: 4px;
         }
 
@@ -1247,7 +1281,7 @@
             text-transform: uppercase;
             letter-spacing: 0.4px;
             padding: 4px 10px 6px;
-            border-bottom: 1px solid #eef1f7;
+            border-bottom: 1px solid #f0f0f2;
             margin-bottom: 2px;
         }
 
@@ -1288,14 +1322,14 @@
             font-size: 0.72rem;
             color: #4a4a4a;
             background: #f6f8fb;
-            border-left: 2px solid #9aa5b8;
+            border-left: 2px solid #a8a8ae;
             padding: 3px 7px;
             margin-top: 3px;
             border-radius: 0 4px 4px 0;
         }
 
         .recognition-item strong {
-            color: #1e3c72;
+            color: #111113;
         }
 
         .hidden-item {
@@ -1334,12 +1368,13 @@
 <body>
     <header>
         <div class="container">
-            <h1>OrganIA</h1>
-            <p class="subtitle">Estructura Organizacional - Empresa de Tecnología e Inteligencia Artificial</p>
-            <div class="view-toggle">
-                <button class="view-toggle-btn active" data-view="list">Vista Lista</button>
-                <button class="view-toggle-btn" data-view="chart">Vista Organigrama</button>
-                <button class="view-toggle-btn" data-view="about">¿Quiénes Somos?</button>
+            <div class="header-top">
+                <h1>OrganIA</h1>
+                <div class="view-toggle">
+                    <button class="view-toggle-btn" data-view="list">Vista Lista</button>
+                    <button class="view-toggle-btn active" data-view="chart">Vista Organigrama</button>
+                    <button class="view-toggle-btn" data-view="about">¿Quiénes Somos?</button>
+                </div>
             </div>
             <div class="search-bar">
                 <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre o departamento...">
@@ -1347,9 +1382,6 @@
                     <button class="control-btn" id="expandAllBtn">Expandir Todo</button>
                     <button class="control-btn" id="collapseAllBtn">Contraer Todo</button>
                 </div>
-            </div>
-            <div class="filters" style="display:flex;">
-                <button class="filter-btn active" data-filter="all">Ver Todo</button>
             </div>
             <div id="customDataNotice" class="custom-data-notice" style="display:none;">
                 📄 Estás viendo una organización cargada desde tu archivo JSON.
@@ -1393,7 +1425,7 @@
     <main>
         <div class="container">
             <!-- Vista Lista -->
-            <div id="listView">
+            <div id="listView" style="display:none">
                 <div class="stats-container" style="margin-bottom: 40px;">
                     <div class="stat-card">
                         <div class="stat-number" id="stat-employees">112</div>
@@ -1412,7 +1444,7 @@
             </div>
 
             <!-- Vista Organigrama -->
-            <div id="chartView" style="display:none">
+            <div id="chartView">
                 <div class="stats-container" style="margin-bottom: 40px;">
                     <div class="stat-card">
                         <div class="stat-number" id="stat-employees-2">112</div>
@@ -1439,7 +1471,7 @@
                 </div>
             </div>
 
-            <div id="treeMinimap" class="tree-minimap" style="display:none;">
+            <div id="treeMinimap" class="tree-minimap">
                 <div id="minimapContent" class="minimap-content"></div>
                 <div id="minimapViewport" class="minimap-viewport"></div>
             </div>
@@ -1949,7 +1981,8 @@
                     const label = document.createElement('label');
                     label.textContent = f.label;
                     const input = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
-                    if (f.type !== 'textarea') input.type = 'text';
+                    // 'password' hace que el navegador lo enmascare con circulos
+                    if (f.type !== 'textarea') input.type = f.type === 'password' ? 'password' : 'text';
                     else input.rows = 3;
                     if (f.value) input.value = f.value;
                     if (f.placeholder) input.placeholder = f.placeholder;
@@ -2092,8 +2125,8 @@
                     ${detailRow('Departamento', node.displayTeam || node.team)}
                     ${detailRow('Reporta a', jefe ? (jefe.vacant ? jefe.role : jefe.name) : '—')}
                     ${node.vacant ? detailRow('Estado', 'Posición vacante') : ''}
-                    ${detailRow('Antigüedad', tenure)}
-                    ${detailRow('Fecha de ingreso', node.startDate)}
+                    ${settingsUnlocked ? detailRow('Antigüedad', tenure) : ''}
+                    ${settingsUnlocked ? detailRow('Fecha de ingreso', node.startDate) : ''}
                     ${directos ? detailRow('Equipo a cargo', `${directos} directos · ${total} en total`) : ''}
                     ${detailRow('A qué se dedica', node.summary)}
                     ${badgeHtml}
@@ -2135,7 +2168,7 @@
 
         function buildTreeNode(node, depth = 0) {
             const li = document.createElement('li');
-            const accent = node.displayAccent || node.accent || '#2a5298';
+            const accent = node.displayAccent || node.accent || '#2e2e33';
             const hasChildren = node.children && node.children.length > 0;
             const directChildren = node.children ? node.children.length : 0;
             const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
@@ -2224,7 +2257,7 @@
                 const hasChildren = node.children && node.children.length > 0;
                 const directChildren = node.children ? node.children.length : 0;
                 const totalChildren = hasChildren ? countEmployees({children: node.children}) : 0;
-                const accent = node.displayAccent || node.accent || '#2a5298';
+                const accent = node.displayAccent || node.accent || '#2e2e33';
                 const isAssistant = node.role && node.role.toLowerCase().includes('asistente');
                 const badgeTypeClass = node.badgeType === 'ai' ? 'badge-ai' : 'badge-month';
                 const badgeIcon = node.badgeType === 'ai' ? '🤖' : '🏅';
@@ -2637,6 +2670,14 @@
             if (photoEditNotice) photoEditNotice.style.display = 'none';
             if (exitEditModeBtn) exitEditModeBtn.style.display = 'none';
             closeSettingsMenu();
+
+            // Al cerrar, las pestañas de Lista y Quiénes Somos desaparecen. Si el
+            // usuario estaba parado en una de ellas se quedaría sin forma de salir,
+            // así que se le regresa al organigrama.
+            const vista = document.querySelector('.view-toggle-btn.active')?.dataset.view;
+            if (vista && vista !== 'chart') {
+                document.querySelector('.view-toggle-btn[data-view="chart"]')?.click();
+            }
         }
 
         if (exitEditModeBtn) {
@@ -2661,7 +2702,7 @@
                 }
                 if (!settingsUnlocked) {
                     const result = await showPromptModal('Configuración protegida', [
-                        { label: 'Ingresa el PIN', type: 'text' }
+                        { label: 'Ingresa el PIN', type: 'password' }
                     ]);
                     if (!result) return;
                     const pin = result[0];
@@ -3328,7 +3369,7 @@
                 dot.className = 'minimap-dot';
                 dot.style.left = Math.min(MINIMAP_W, Math.max(0, nx * MINIMAP_W)) + 'px';
                 dot.style.top = Math.min(MINIMAP_H, Math.max(0, ny * MINIMAP_H)) + 'px';
-                dot.style.background = getComputedStyle(card).getPropertyValue('--accent') || '#2a5298';
+                dot.style.background = getComputedStyle(card).getPropertyValue('--accent') || '#2e2e33';
                 minimapContent.appendChild(dot);
             });
         }
@@ -3379,6 +3420,68 @@
             }
         })();
 
+        // ---- Mover el organigrama arrastrando (manita) ----
+        // Sustituye a la barra de desplazamiento. En horizontal mueve el propio
+        // lienzo; en vertical mueve la página, que es donde vive ese scroll.
+        // Se usan esas dos fuentes a propósito: son exactamente las que ya leen
+        // el minimapa y el guardado de posición entre recargas.
+        (function habilitarManita() {
+            const wrapper = document.querySelector('.chart-view-wrapper');
+            if (!wrapper) return;
+
+            const UMBRAL = 4;   // px a partir de los cuales es arrastre y no clic
+            let activo = false, arrastrando = false;
+            let xIni = 0, yIni = 0, scrollIni = 0, pageYIni = 0;
+
+            wrapper.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;                    // solo botón izquierdo
+                // En modo edición las tarjetas se arrastran para reasignar jefe:
+                // ahí manda el arrastre nativo y la manita se aparta.
+                if (settingsUnlocked && e.target.closest('[data-node-key]')) return;
+                // Los controles conservan su comportamiento propio.
+                if (e.target.closest('button, input, a, .tree-minimap')) return;
+
+                activo = true;
+                arrastrando = false;
+                xIni = e.clientX;
+                yIni = e.clientY;
+                scrollIni = wrapper.scrollLeft;
+                pageYIni = window.scrollY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!activo) return;
+                const dx = e.clientX - xIni;
+                const dy = e.clientY - yIni;
+                if (!arrastrando && Math.hypot(dx, dy) < UMBRAL) return;
+
+                if (!arrastrando) {
+                    arrastrando = true;
+                    wrapper.classList.add('arrastrando');
+                }
+                e.preventDefault();
+                wrapper.scrollLeft = scrollIni - dx;
+                window.scrollTo(window.scrollX, pageYIni - dy);
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!activo) return;
+                activo = false;
+                if (!arrastrando) return;
+
+                wrapper.classList.remove('arrastrando');
+                arrastrando = false;
+
+                // Tras arrastrar, el navegador dispara un clic. Si se dejara pasar,
+                // cada movimiento contraería la rama donde se empezó a mover.
+                const tragarClic = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+                window.addEventListener('click', tragarClic, { capture: true, once: true });
+                // Si el clic no llegara, no dejamos el capturador puesto esperando
+                // al siguiente, que sí sería legítimo.
+                setTimeout(() => window.removeEventListener('click', tragarClic, { capture: true }), 0);
+            });
+        })();
+
         // ---- Conservar la vista entre recargas ----
         // Cada acción de edición recarga la página; sin esto, siempre se volvía a la
         // Vista Lista y se perdían las ramas expandidas, el zoom y la posición.
@@ -3390,7 +3493,7 @@
                 .filter(Boolean);
             const wrapper = document.querySelector('.chart-view-wrapper');
             sessionStorage.setItem(VIEW_STATE_KEY, JSON.stringify({
-                view: document.querySelector('.view-toggle-btn.active')?.dataset.view || 'list',
+                view: document.querySelector('.view-toggle-btn.active')?.dataset.view || 'chart',
                 expandidos,
                 zoom: chartZoom,
                 scrollY: window.scrollY,
@@ -3403,8 +3506,13 @@
             try { st = JSON.parse(sessionStorage.getItem(VIEW_STATE_KEY) || 'null'); } catch (e) {}
             if (!st) return;
 
-            if (st.view && st.view !== 'list') {
-                const btn = document.querySelector(`.view-toggle-btn[data-view="${st.view}"]`);
+            // Lista y "Quiénes Somos" solo existen con contraseña: si la sesión
+            // guardó una de ellas y ya no hay contraseña, se vuelve al organigrama
+            // para no dejar visible una vista sin pestaña con la cual salir.
+            let vistaGuardada = st.view || 'chart';
+            if (!settingsUnlocked && vistaGuardada !== 'chart') vistaGuardada = 'chart';
+            if (vistaGuardada !== 'chart') {
+                const btn = document.querySelector(`.view-toggle-btn[data-view="${vistaGuardada}"]`);
                 if (btn) btn.click();
             }
 
@@ -3431,7 +3539,7 @@
             if (!personKey) return;
             sessionStorage.removeItem('organia_reveal');
 
-            const vistaActiva = document.querySelector('.view-toggle-btn.active')?.dataset.view || 'list';
+            const vistaActiva = document.querySelector('.view-toggle-btn.active')?.dataset.view || 'chart';
 
             if (vistaActiva === 'chart') {
                 const card = Array.from(document.querySelectorAll('#orgTreeRoot .org-card[data-node-key]'))
