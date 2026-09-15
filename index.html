@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OrganIA - Organigrama Corporativo</title>
+    <!-- Icono embebido: evita el 404 de favicon.ico sin agregar otro archivo -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23111113'/%3E%3Crect x='38' y='14' width='24' height='18' rx='4' fill='white'/%3E%3Crect x='14' y='62' width='24' height='18' rx='4' fill='white'/%3E%3Crect x='62' y='62' width='24' height='18' rx='4' fill='white'/%3E%3Cpath d='M50 32v14M26 62V46h48v16' stroke='white' stroke-width='5' fill='none'/%3E%3C/svg%3E">
     <style>
         * {
             margin: 0;
@@ -1360,7 +1362,10 @@
                 </div>
             </div>
             <div id="customDataNotice" class="custom-data-notice" style="display:none;">
-                📄 Estás viendo una organización cargada desde tu archivo JSON.
+                📄 <strong>Vista previa local.</strong> Estás viendo un archivo que subiste en
+                este navegador; los demás siguen viendo la organización publicada. Para que este
+                cambio lo vean todos hay que publicarlo. Con <strong>↺ Restablecer original</strong>
+                vuelves a la versión publicada.
             </div>
             <div id="photoEditNotice" class="custom-data-notice photo-edit-notice" style="display:none;">
                 🖊 Modo edición activo: <strong>clic derecho</strong> sobre una tarjeta abre el menú (editar, foto, reconocer, marcar vacante), y puedes <strong>arrastrar una tarjeta sobre otra</strong> para cambiarle de jefe. Las acciones también están dentro de <strong>ⓘ Más información</strong>.
@@ -1449,7 +1454,411 @@
     </main>
 
     <script>
+    // Todo el arranque vive dentro de una funcion asincrona porque lo primero
+    // que hace la app es descargar la organizacion publicada (organia-datos.csv).
+    // Las cuatro funciones que se llaman desde atributos onclick del HTML se
+    // publican explicitamente en window mas abajo, asi que esto no las rompe.
+    (async () => {
         // ORG_DATA - Estructura Organizacional
+        // =================================================================
+        //  Carga desde Excel (.xlsx) o CSV
+        //
+        //  La hoja viene PLANA: una fila por persona, con el nombre de su
+        //  jefe en una columna. Aquí se reconstruye la jerarquía a partir
+        //  de esa referencia.
+        //
+        //  No se usa ninguna librería: un .xlsx es un ZIP con XML adentro,
+        //  y el navegador ya sabe descomprimir (DecompressionStream) y leer
+        //  XML (DOMParser). Esto mantiene la app en un solo archivo, que es
+        //  además lo único que permite la política de seguridad del sitio.
+        // =================================================================
+
+        // ---- Lectura de .xlsx ----
+
+        async function inflarCrudo(bytes) {
+            const flujo = new Blob([bytes]).stream()
+                .pipeThrough(new DecompressionStream('deflate-raw'));
+            return new Uint8Array(await new Response(flujo).arrayBuffer());
+        }
+
+        // Recorre el índice del ZIP para saber dónde vive cada archivo interno
+        function abrirZip(buffer) {
+            const dv = new DataView(buffer);
+            const u8 = new Uint8Array(buffer);
+
+            let fin = -1;
+            const tope = Math.max(0, u8.length - 65558);
+            for (let i = u8.length - 22; i >= tope; i--) {
+                if (dv.getUint32(i, true) === 0x06054b50) { fin = i; break; }
+            }
+            if (fin < 0) throw new Error('El archivo no parece un .xlsx válido.');
+
+            const total = dv.getUint16(fin + 10, true);
+            let pos = dv.getUint32(fin + 16, true);
+            const entradas = {};
+            for (let i = 0; i < total; i++) {
+                if (dv.getUint32(pos, true) !== 0x02014b50) break;
+                const largoNombre = dv.getUint16(pos + 28, true);
+                entradas[new TextDecoder().decode(u8.subarray(pos + 46, pos + 46 + largoNombre))] = {
+                    metodo: dv.getUint16(pos + 10, true),
+                    comprimido: dv.getUint32(pos + 20, true),
+                    offsetLocal: dv.getUint32(pos + 42, true)
+                };
+                pos += 46 + largoNombre + dv.getUint16(pos + 30, true) + dv.getUint16(pos + 32, true);
+            }
+            return { dv, u8, entradas };
+        }
+
+        async function leerDelZip(zip, nombre) {
+            const e = zip.entradas[nombre];
+            if (!e) return null;
+            const inicio = e.offsetLocal + 30
+                + zip.dv.getUint16(e.offsetLocal + 26, true)
+                + zip.dv.getUint16(e.offsetLocal + 28, true);
+            const datos = zip.u8.subarray(inicio, inicio + e.comprimido);
+            const bytes = e.metodo === 0 ? datos : await inflarCrudo(datos);
+            return new TextDecoder('utf-8').decode(bytes);
+        }
+
+        // "C" -> 2. Hace falta porque Excel omite las celdas vacías: sin esto,
+        // una fila con huecos correría las columnas siguientes.
+        function columnaDeReferencia(ref) {
+            const m = /^([A-Z]+)/.exec(ref || '');
+            if (!m) return 0;
+            let n = 0;
+            for (const c of m[1]) n = n * 26 + (c.charCodeAt(0) - 64);
+            return n - 1;
+        }
+
+        async function leerXlsx(buffer) {
+            const zip = abrirZip(buffer);
+
+            const nombreHoja = Object.keys(zip.entradas)
+                .filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+                .sort()[0];
+            if (!nombreHoja) throw new Error('El .xlsx no contiene ninguna hoja de cálculo.');
+
+            const dp = new DOMParser();
+
+            // Excel guarda los textos repetidos en una tabla aparte
+            const compartidas = [];
+            const xmlCompartidas = await leerDelZip(zip, 'xl/sharedStrings.xml');
+            if (xmlCompartidas) {
+                const doc = dp.parseFromString(xmlCompartidas, 'application/xml');
+                for (const si of doc.getElementsByTagNameNS('*', 'si')) {
+                    compartidas.push(Array.from(si.getElementsByTagNameNS('*', 't'))
+                        .map(t => t.textContent).join(''));
+                }
+            }
+
+            const doc = dp.parseFromString(await leerDelZip(zip, nombreHoja), 'application/xml');
+            const filas = [];
+            for (const fila of doc.getElementsByTagNameNS('*', 'row')) {
+                const celdas = [];
+                for (const c of fila.getElementsByTagNameNS('*', 'c')) {
+                    const col = columnaDeReferencia(c.getAttribute('r'));
+                    const tipo = c.getAttribute('t');
+                    let valor;
+                    if (tipo === 'inlineStr') {
+                        valor = Array.from(c.getElementsByTagNameNS('*', 't'))
+                            .map(t => t.textContent).join('');
+                    } else {
+                        const v = c.getElementsByTagNameNS('*', 'v')[0];
+                        valor = v ? v.textContent : '';
+                        if (tipo === 's') valor = compartidas[parseInt(valor, 10)] || '';
+                    }
+                    celdas[col] = String(valor == null ? '' : valor).trim();
+                }
+                filas.push(celdas);
+            }
+            return filas;
+        }
+
+        // ---- Lectura de CSV ----
+
+        function decodificarTexto(buffer) {
+            let t;
+            try {
+                // Si no es UTF-8 válido, casi siempre es un CSV guardado por
+                // Excel en Windows, que usa windows-1252 y rompe los acentos.
+                t = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+            } catch (e) {
+                t = new TextDecoder('windows-1252').decode(buffer);
+            }
+            return t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t;   // quitar BOM
+        }
+
+        function leerCsv(texto) {
+            const primera = texto.split(/\r?\n/)[0] || '';
+            // Excel en español separa con punto y coma
+            const sep = primera.split(';').length > primera.split(',').length ? ';' : ',';
+            const filas = [];
+            let campo = '', fila = [], entreComillas = false;
+
+            for (let i = 0; i < texto.length; i++) {
+                const c = texto[i];
+                if (entreComillas) {
+                    if (c === '"') {
+                        if (texto[i + 1] === '"') { campo += '"'; i++; }
+                        else entreComillas = false;
+                    } else campo += c;
+                } else if (c === '"') entreComillas = true;
+                else if (c === sep) { fila.push(campo.trim()); campo = ''; }
+                else if (c === '\n') { fila.push(campo.trim()); filas.push(fila); fila = []; campo = ''; }
+                else if (c !== '\r') campo += c;
+            }
+            if (campo !== '' || fila.length) { fila.push(campo.trim()); filas.push(fila); }
+            return filas;
+        }
+
+        // ---- Reconocimiento de columnas ----
+
+        function normalizarEncabezado(s) {
+            return String(s || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // quitar acentos
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+        }
+
+        // Cada campo acepta varios nombres, en español y en inglés, para que
+        // la hoja no tenga que adaptarse a la app.
+        const ALIAS_COLUMNAS = {
+            jefe:           ['manager', 'jefe', 'jefe directo', 'reporta a', 'manager name', 'supervisor', 'reports to'],
+            puestoJefe:     ['manager position', 'puesto del jefe', 'manager title', 'puesto jefe', 'manager job title'],
+            nombre:         ['person first name', 'first name', 'nombre', 'nombres', 'nombre de pila'],
+            apellido:       ['person last name', 'last name', 'apellido', 'apellidos', 'person lastname'],
+            nombreCompleto: ['nombre completo', 'full name', 'empleado', 'colaborador', 'persona', 'name'],
+            puesto:         ['role job title', 'job title', 'role', 'puesto', 'cargo', 'titulo', 'position'],
+            area:           ['department', 'departamento', 'area', 'direccion', 'equipo', 'team', 'gerencia'],
+            fechaIngreso:   ['start date', 'fecha de ingreso', 'fecha ingreso', 'hire date', 'fecha de alta', 'ingreso'],
+            resumen:        ['summary', 'a que se dedica', 'descripcion', 'funciones', 'job description', 'resumen'],
+            distintivo:     ['badge', 'distintivo'],
+            tipoDistintivo: ['badge type', 'tipo de distintivo', 'tipo distintivo'],
+            periodo:        ['badge period', 'periodo del distintivo', 'periodo'],
+            motivo:         ['badge reason', 'motivo del distintivo', 'motivo'],
+            otorgadoPor:    ['badge granted by', 'distintivo otorgado por', 'otorgado por'],
+            reconocimientos:['recognitions', 'reconocimientos', 'reconocimientos recibidos'],
+            foto:           ['photo', 'foto', 'imagen', 'photo url', 'ruta de foto'],
+            vacante:        ['vacant', 'vacante', 'plaza vacante'],
+            color:          ['accent', 'color', 'color de area', 'color del area']
+        };
+
+        // Columnas que la app exporta como referencia pero recalcula sola al
+        // leer: no son datos que se carguen, y avisar de ellas como
+        // "ignoradas" solo confundiria.
+        const COLUMNAS_CALCULADAS = [
+            'nivel', 'level', 'antiguedad', 'tenure', 'reportes directos',
+            'direct reports', 'total a cargo', 'total', 'contador', 'id'
+        ];
+
+        function mapearColumnas(encabezados) {
+            const mapa = {}, usadas = new Set();
+            const normalizados = encabezados.map(normalizarEncabezado);
+
+            for (const [campo, alias] of Object.entries(ALIAS_COLUMNAS)) {
+                // Primero coincidencia exacta; si no, que el encabezado contenga el alias
+                let i = normalizados.findIndex((h, idx) => h && !usadas.has(idx) && alias.includes(h));
+                if (i === -1) {
+                    i = normalizados.findIndex((h, idx) => h && !usadas.has(idx) &&
+                        alias.some(a => h === a || h.startsWith(a + ' ') || h.endsWith(' ' + a)));
+                }
+                if (i !== -1) { mapa[campo] = i; usadas.add(i); }
+            }
+            const ignoradas = encabezados
+                .map((h, i) => (h && !usadas.has(i) &&
+                    !COLUMNAS_CALCULADAS.includes(normalizarEncabezado(h))) ? h : null)
+                .filter(Boolean);
+            return { mapa, ignoradas };
+        }
+
+        // Excel guarda las fechas como número de días desde 1899-12-30
+        function fechaDeSerieExcel(valor) {
+            const n = Number(valor);
+            if (!isFinite(n) || n < 20000 || n > 80000) return null;
+            const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function normalizarFecha(valor) {
+            if (!valor) return '';
+            const serie = fechaDeSerieExcel(valor);
+            if (serie) return serie;
+            const s = String(valor).trim();
+            if (/^\d{4}-\d{2}(-\d{2})?$/.test(s)) return s;
+            // dd/mm/aaaa o dd-mm-aaaa
+            const m = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(s);
+            if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+            return s;
+        }
+
+        const esSi = v => /^(s[ií]|si|yes|true|verdadero|x|1)$/i.test(String(v || '').trim());
+
+        // ---- De filas planas a organigrama ----
+
+        function filasAOrganigrama(filas) {
+            const conContenido = filas.filter(f => f && f.some(c => String(c || '').trim() !== ''));
+            if (!conContenido.length) throw new Error('La hoja está vacía.');
+
+            const { mapa, ignoradas } = mapearColumnas(conContenido[0]);
+            if (mapa.nombre === undefined && mapa.nombreCompleto === undefined) {
+                throw new Error(
+                    'No encontré la columna del nombre de la persona.\n\n' +
+                    'Se esperaba alguna de: "Person-First Name", "Nombre" o "Nombre completo".\n' +
+                    'Encabezados encontrados: ' + conContenido[0].filter(Boolean).join(', '));
+            }
+            if (mapa.puesto === undefined) {
+                throw new Error(
+                    'No encontré la columna del puesto.\n\n' +
+                    'Se esperaba alguna de: "Role- Job Title", "Job Title" o "Puesto".\n' +
+                    'Encabezados encontrados: ' + conContenido[0].filter(Boolean).join(', '));
+            }
+
+            const val = (fila, campo) => mapa[campo] === undefined
+                ? '' : String(fila[mapa[campo]] || '').trim();
+
+            const personas = [];
+            const omitidas = [];
+            conContenido.slice(1).forEach((fila, i) => {
+                const nombre = (mapa.nombreCompleto !== undefined && val(fila, 'nombreCompleto'))
+                    ? val(fila, 'nombreCompleto')
+                    : [val(fila, 'nombre'), val(fila, 'apellido')].filter(Boolean).join(' ').trim();
+                const puesto = val(fila, 'puesto');
+
+                if (!nombre && !puesto) return;                 // fila en blanco
+                if (!puesto) { omitidas.push(`fila ${i + 2}: "${nombre}" no tiene puesto`); return; }
+
+                const nodo = { role: puesto };
+                if (esSi(val(fila, 'vacante'))) {
+                    nodo.vacant = true;                          // una vacante no lleva nombre
+                } else {
+                    if (!nombre) { omitidas.push(`fila ${i + 2}: sin nombre y sin marcar como vacante`); return; }
+                    nodo.name = nombre;
+                }
+                const area = val(fila, 'area');           if (area) nodo.team = area;
+                const color = val(fila, 'color');         if (/^#[0-9a-f]{6}$/i.test(color)) nodo.accent = color;
+                const fecha = normalizarFecha(val(fila, 'fechaIngreso')); if (fecha) nodo.startDate = fecha;
+                const resumen = val(fila, 'resumen');     if (resumen) nodo.summary = resumen;
+                const foto = val(fila, 'foto');           if (foto) nodo.photo = foto;
+                const badge = val(fila, 'distintivo');
+                if (badge) {
+                    nodo.badge = badge;
+                    const tipo = val(fila, 'tipoDistintivo');
+                    nodo.badgeType = tipo ? tipo.toLowerCase() : (/ai|champion/i.test(badge) ? 'ai' : 'destacado');
+                    const periodo = val(fila, 'periodo');       if (periodo) nodo.badgePeriod = periodo;
+                    const porQuien = val(fila, 'otorgadoPor');  if (porQuien) nodo.badgeGrantedBy = porQuien;
+                    // El motivo solo aplica a Colaborador Destacado; los
+                    // AI Champion nunca llevan descripcion.
+                    const motivo = val(fila, 'motivo');
+                    if (motivo && nodo.badgeType !== 'ai') nodo.badgeReason = motivo;
+                }
+
+                // "Quien: mensaje | Quien: mensaje". Se corta en el primer
+                // ": " de cada parte para no romper mensajes que traigan mas.
+                const recs = val(fila, 'reconocimientos');
+                if (recs) {
+                    const lista = recs.split('|').map(p => {
+                        const s = p.trim();
+                        const i = s.indexOf(':');
+                        return i > 0
+                            ? { from: s.slice(0, i).trim(), message: s.slice(i + 1).trim() }
+                            : null;
+                    }).filter(r => r && r.from && r.message);
+                    if (lista.length) nodo.recognitions = lista;
+                }
+
+                personas.push({
+                    nodo,
+                    etiqueta: nombre || puesto,
+                    jefe: val(fila, 'jefe'),
+                    puestoJefe: val(fila, 'puestoJefe'),
+                    fila: i + 2
+                });
+            });
+
+            if (!personas.length) throw new Error('No se encontró ninguna persona con nombre y puesto.');
+
+            // Índice por nombre. Los homónimos se desempatan con el puesto del jefe.
+            const clave = s => normalizarEncabezado(s);
+            const porNombre = new Map();
+            personas.forEach(p => {
+                const k = clave(p.etiqueta);
+                if (!porNombre.has(k)) porNombre.set(k, []);
+                porNombre.get(k).push(p);
+            });
+
+            const buscarJefe = (p) => {
+                const candidatos = porNombre.get(clave(p.jefe));
+                if (!candidatos || !candidatos.length) return null;
+                if (candidatos.length === 1) return candidatos[0];
+                if (p.puestoJefe) {
+                    const exacto = candidatos.find(c => clave(c.nodo.role) === clave(p.puestoJefe));
+                    if (exacto) return exacto;
+                }
+                return candidatos[0];
+            };
+
+            // Asignar padres
+            const raices = [], huerfanos = [], ciclos = [];
+            personas.forEach(p => {
+                if (!p.jefe) { raices.push(p); return; }
+                const jefe = buscarJefe(p);
+                if (!jefe) { huerfanos.push(p); return; }
+                if (jefe === p) { ciclos.push(p); return; }
+                p.padre = jefe;
+            });
+
+            // Romper ciclos: si subiendo por la cadena de jefes se vuelve a la
+            // misma persona, la hoja se contradice y ese vínculo se descarta.
+            personas.forEach(p => {
+                const vistos = new Set([p]);
+                let actual = p.padre;
+                while (actual) {
+                    if (vistos.has(actual)) { ciclos.push(p); p.padre = null; huerfanos.push(p); break; }
+                    vistos.add(actual);
+                    actual = actual.padre;
+                }
+            });
+
+            // Elegir la raíz: si hay varias sin jefe, manda la que tenga más gente debajo
+            let raiz;
+            if (raices.length === 1) {
+                raiz = raices[0];
+            } else if (raices.length > 1) {
+                const cuenta = p => personas.filter(x => x.padre === p).length;
+                raices.sort((a, b) => cuenta(b) - cuenta(a));
+                raiz = raices[0];
+                raices.slice(1).forEach(p => { p.padre = raiz; huerfanos.push(p); });
+            } else {
+                // Nadie sin jefe: la hoja está toda enlazada. Se toma a quien
+                // esté más arriba en la cadena.
+                let p = personas[0], guarda = 0;
+                while (p.padre && guarda++ < personas.length) p = p.padre;
+                raiz = p;
+                raiz.padre = null;
+            }
+            huerfanos.forEach(p => { if (p !== raiz && !p.padre) p.padre = raiz; });
+
+            personas.forEach(p => {
+                if (p.padre && p !== raiz) {
+                    (p.padre.nodo.children = p.padre.nodo.children || []).push(p.nodo);
+                }
+            });
+
+            return {
+                arbol: raiz.nodo,
+                reporte: {
+                    total: personas.length,
+                    raiz: raiz.etiqueta + ' — ' + raiz.nodo.role,
+                    columnas: Object.keys(mapa),
+                    ignoradas,
+                    huerfanos: huerfanos.filter(p => p !== raiz).map(p => `${p.etiqueta} (fila ${p.fila})`),
+                    ciclos: ciclos.map(p => `${p.etiqueta} (fila ${p.fila})`),
+                    omitidas
+                }
+            };
+        }
+
         let ORG_DATA = {
             name: 'Carlos Mendoza', role: 'Chief Executive Officer', startDate: '2018-02-05', summary: 'Define la estrategia global de la compañía, encabeza al comité ejecutivo y responde ante el consejo de administración.', team: 'Dirección General', accent: '#1e3c72', photo: 'photos/carlos-mendoza.png',
             children: [
@@ -1636,14 +2045,45 @@
         const UPLOAD_PIN = '2026';
         let usingCustomData = false;
 
+        // ---- Fuente de los datos, en orden de prioridad ----
+        //
+        //   1. Vista previa local: un archivo que este navegador subió desde
+        //      la tuerca. Solo la ve quien lo subió; sirve para revisar antes
+        //      de publicar. Se quita con "Restablecer original".
+        //   2. La organización PUBLICADA: organia-datos.csv, junto al HTML.
+        //      Es la que ven todos. Para actualizarla se reemplaza ese archivo
+        //      en el servidor; no hace falta tocar el HTML.
+        //   3. Los datos de ejemplo incluidos aquí, como último recurso —
+        //      cuando la página se abre desde el disco o falta el archivo.
+        const ARCHIVO_PUBLICADO = 'organia-datos.csv';
+        let origenDatos = 'ejemplo';
+
         try {
             const storedData = localStorage.getItem(CUSTOM_DATA_KEY);
             if (storedData) {
                 ORG_DATA = JSON.parse(storedData);
                 usingCustomData = true;
+                origenDatos = 'vista previa local';
             }
         } catch (e) {
             console.error('No se pudo cargar la organización guardada, se usan los datos por defecto.', e);
+        }
+
+        if (!usingCustomData) {
+            try {
+                // 'no-store' para que al reemplazar el archivo en el servidor
+                // todo el mundo vea el cambio en la siguiente visita.
+                const resp = await fetch(ARCHIVO_PUBLICADO, { cache: 'no-store' });
+                if (resp.ok) {
+                    const publicado = filasAOrganigrama(leerCsv(decodificarTexto(await resp.arrayBuffer())));
+                    ORG_DATA = publicado.arbol;
+                    origenDatos = 'publicada';
+                }
+            } catch (e) {
+                // Sin archivo publicado (o abierto desde el disco): se siguen
+                // usando los datos de ejemplo, que ya están en ORG_DATA.
+                console.info('No hay organización publicada; se usan los datos incluidos.', e.message);
+            }
         }
 
         // Identidad estable para los cambios guardados: el nombre ORIGINAL de los datos base.
@@ -3215,404 +3655,6 @@
             });
         }
 
-        // =================================================================
-        //  Carga desde Excel (.xlsx) o CSV
-        //
-        //  La hoja viene PLANA: una fila por persona, con el nombre de su
-        //  jefe en una columna. Aquí se reconstruye la jerarquía a partir
-        //  de esa referencia.
-        //
-        //  No se usa ninguna librería: un .xlsx es un ZIP con XML adentro,
-        //  y el navegador ya sabe descomprimir (DecompressionStream) y leer
-        //  XML (DOMParser). Esto mantiene la app en un solo archivo, que es
-        //  además lo único que permite la política de seguridad del sitio.
-        // =================================================================
-
-        // ---- Lectura de .xlsx ----
-
-        async function inflarCrudo(bytes) {
-            const flujo = new Blob([bytes]).stream()
-                .pipeThrough(new DecompressionStream('deflate-raw'));
-            return new Uint8Array(await new Response(flujo).arrayBuffer());
-        }
-
-        // Recorre el índice del ZIP para saber dónde vive cada archivo interno
-        function abrirZip(buffer) {
-            const dv = new DataView(buffer);
-            const u8 = new Uint8Array(buffer);
-
-            let fin = -1;
-            const tope = Math.max(0, u8.length - 65558);
-            for (let i = u8.length - 22; i >= tope; i--) {
-                if (dv.getUint32(i, true) === 0x06054b50) { fin = i; break; }
-            }
-            if (fin < 0) throw new Error('El archivo no parece un .xlsx válido.');
-
-            const total = dv.getUint16(fin + 10, true);
-            let pos = dv.getUint32(fin + 16, true);
-            const entradas = {};
-            for (let i = 0; i < total; i++) {
-                if (dv.getUint32(pos, true) !== 0x02014b50) break;
-                const largoNombre = dv.getUint16(pos + 28, true);
-                entradas[new TextDecoder().decode(u8.subarray(pos + 46, pos + 46 + largoNombre))] = {
-                    metodo: dv.getUint16(pos + 10, true),
-                    comprimido: dv.getUint32(pos + 20, true),
-                    offsetLocal: dv.getUint32(pos + 42, true)
-                };
-                pos += 46 + largoNombre + dv.getUint16(pos + 30, true) + dv.getUint16(pos + 32, true);
-            }
-            return { dv, u8, entradas };
-        }
-
-        async function leerDelZip(zip, nombre) {
-            const e = zip.entradas[nombre];
-            if (!e) return null;
-            const inicio = e.offsetLocal + 30
-                + zip.dv.getUint16(e.offsetLocal + 26, true)
-                + zip.dv.getUint16(e.offsetLocal + 28, true);
-            const datos = zip.u8.subarray(inicio, inicio + e.comprimido);
-            const bytes = e.metodo === 0 ? datos : await inflarCrudo(datos);
-            return new TextDecoder('utf-8').decode(bytes);
-        }
-
-        // "C" -> 2. Hace falta porque Excel omite las celdas vacías: sin esto,
-        // una fila con huecos correría las columnas siguientes.
-        function columnaDeReferencia(ref) {
-            const m = /^([A-Z]+)/.exec(ref || '');
-            if (!m) return 0;
-            let n = 0;
-            for (const c of m[1]) n = n * 26 + (c.charCodeAt(0) - 64);
-            return n - 1;
-        }
-
-        async function leerXlsx(buffer) {
-            const zip = abrirZip(buffer);
-
-            const nombreHoja = Object.keys(zip.entradas)
-                .filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
-                .sort()[0];
-            if (!nombreHoja) throw new Error('El .xlsx no contiene ninguna hoja de cálculo.');
-
-            const dp = new DOMParser();
-
-            // Excel guarda los textos repetidos en una tabla aparte
-            const compartidas = [];
-            const xmlCompartidas = await leerDelZip(zip, 'xl/sharedStrings.xml');
-            if (xmlCompartidas) {
-                const doc = dp.parseFromString(xmlCompartidas, 'application/xml');
-                for (const si of doc.getElementsByTagNameNS('*', 'si')) {
-                    compartidas.push(Array.from(si.getElementsByTagNameNS('*', 't'))
-                        .map(t => t.textContent).join(''));
-                }
-            }
-
-            const doc = dp.parseFromString(await leerDelZip(zip, nombreHoja), 'application/xml');
-            const filas = [];
-            for (const fila of doc.getElementsByTagNameNS('*', 'row')) {
-                const celdas = [];
-                for (const c of fila.getElementsByTagNameNS('*', 'c')) {
-                    const col = columnaDeReferencia(c.getAttribute('r'));
-                    const tipo = c.getAttribute('t');
-                    let valor;
-                    if (tipo === 'inlineStr') {
-                        valor = Array.from(c.getElementsByTagNameNS('*', 't'))
-                            .map(t => t.textContent).join('');
-                    } else {
-                        const v = c.getElementsByTagNameNS('*', 'v')[0];
-                        valor = v ? v.textContent : '';
-                        if (tipo === 's') valor = compartidas[parseInt(valor, 10)] || '';
-                    }
-                    celdas[col] = String(valor == null ? '' : valor).trim();
-                }
-                filas.push(celdas);
-            }
-            return filas;
-        }
-
-        // ---- Lectura de CSV ----
-
-        function decodificarTexto(buffer) {
-            let t;
-            try {
-                // Si no es UTF-8 válido, casi siempre es un CSV guardado por
-                // Excel en Windows, que usa windows-1252 y rompe los acentos.
-                t = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-            } catch (e) {
-                t = new TextDecoder('windows-1252').decode(buffer);
-            }
-            return t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t;   // quitar BOM
-        }
-
-        function leerCsv(texto) {
-            const primera = texto.split(/\r?\n/)[0] || '';
-            // Excel en español separa con punto y coma
-            const sep = primera.split(';').length > primera.split(',').length ? ';' : ',';
-            const filas = [];
-            let campo = '', fila = [], entreComillas = false;
-
-            for (let i = 0; i < texto.length; i++) {
-                const c = texto[i];
-                if (entreComillas) {
-                    if (c === '"') {
-                        if (texto[i + 1] === '"') { campo += '"'; i++; }
-                        else entreComillas = false;
-                    } else campo += c;
-                } else if (c === '"') entreComillas = true;
-                else if (c === sep) { fila.push(campo.trim()); campo = ''; }
-                else if (c === '\n') { fila.push(campo.trim()); filas.push(fila); fila = []; campo = ''; }
-                else if (c !== '\r') campo += c;
-            }
-            if (campo !== '' || fila.length) { fila.push(campo.trim()); filas.push(fila); }
-            return filas;
-        }
-
-        // ---- Reconocimiento de columnas ----
-
-        function normalizarEncabezado(s) {
-            return String(s || '')
-                .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // quitar acentos
-                .replace(/[^a-z0-9]+/g, ' ')
-                .trim();
-        }
-
-        // Cada campo acepta varios nombres, en español y en inglés, para que
-        // la hoja no tenga que adaptarse a la app.
-        const ALIAS_COLUMNAS = {
-            jefe:           ['manager', 'jefe', 'jefe directo', 'reporta a', 'manager name', 'supervisor', 'reports to'],
-            puestoJefe:     ['manager position', 'puesto del jefe', 'manager title', 'puesto jefe', 'manager job title'],
-            nombre:         ['person first name', 'first name', 'nombre', 'nombres', 'nombre de pila'],
-            apellido:       ['person last name', 'last name', 'apellido', 'apellidos', 'person lastname'],
-            nombreCompleto: ['nombre completo', 'full name', 'empleado', 'colaborador', 'persona', 'name'],
-            puesto:         ['role job title', 'job title', 'role', 'puesto', 'cargo', 'titulo', 'position'],
-            area:           ['department', 'departamento', 'area', 'direccion', 'equipo', 'team', 'gerencia'],
-            fechaIngreso:   ['start date', 'fecha de ingreso', 'fecha ingreso', 'hire date', 'fecha de alta', 'ingreso'],
-            resumen:        ['summary', 'a que se dedica', 'descripcion', 'funciones', 'job description', 'resumen'],
-            distintivo:     ['badge', 'distintivo'],
-            tipoDistintivo: ['badge type', 'tipo de distintivo', 'tipo distintivo'],
-            periodo:        ['badge period', 'periodo del distintivo', 'periodo'],
-            motivo:         ['badge reason', 'motivo del distintivo', 'motivo'],
-            otorgadoPor:    ['badge granted by', 'distintivo otorgado por', 'otorgado por'],
-            reconocimientos:['recognitions', 'reconocimientos', 'reconocimientos recibidos'],
-            foto:           ['photo', 'foto', 'imagen', 'photo url', 'ruta de foto'],
-            vacante:        ['vacant', 'vacante', 'plaza vacante'],
-            color:          ['accent', 'color', 'color de area', 'color del area']
-        };
-
-        // Columnas que la app exporta como referencia pero recalcula sola al
-        // leer: no son datos que se carguen, y avisar de ellas como
-        // "ignoradas" solo confundiria.
-        const COLUMNAS_CALCULADAS = [
-            'nivel', 'level', 'antiguedad', 'tenure', 'reportes directos',
-            'direct reports', 'total a cargo', 'total', 'contador', 'id'
-        ];
-
-        function mapearColumnas(encabezados) {
-            const mapa = {}, usadas = new Set();
-            const normalizados = encabezados.map(normalizarEncabezado);
-
-            for (const [campo, alias] of Object.entries(ALIAS_COLUMNAS)) {
-                // Primero coincidencia exacta; si no, que el encabezado contenga el alias
-                let i = normalizados.findIndex((h, idx) => h && !usadas.has(idx) && alias.includes(h));
-                if (i === -1) {
-                    i = normalizados.findIndex((h, idx) => h && !usadas.has(idx) &&
-                        alias.some(a => h === a || h.startsWith(a + ' ') || h.endsWith(' ' + a)));
-                }
-                if (i !== -1) { mapa[campo] = i; usadas.add(i); }
-            }
-            const ignoradas = encabezados
-                .map((h, i) => (h && !usadas.has(i) &&
-                    !COLUMNAS_CALCULADAS.includes(normalizarEncabezado(h))) ? h : null)
-                .filter(Boolean);
-            return { mapa, ignoradas };
-        }
-
-        // Excel guarda las fechas como número de días desde 1899-12-30
-        function fechaDeSerieExcel(valor) {
-            const n = Number(valor);
-            if (!isFinite(n) || n < 20000 || n > 80000) return null;
-            const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000);
-            return d.toISOString().slice(0, 10);
-        }
-
-        function normalizarFecha(valor) {
-            if (!valor) return '';
-            const serie = fechaDeSerieExcel(valor);
-            if (serie) return serie;
-            const s = String(valor).trim();
-            if (/^\d{4}-\d{2}(-\d{2})?$/.test(s)) return s;
-            // dd/mm/aaaa o dd-mm-aaaa
-            const m = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(s);
-            if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-            return s;
-        }
-
-        const esSi = v => /^(s[ií]|si|yes|true|verdadero|x|1)$/i.test(String(v || '').trim());
-
-        // ---- De filas planas a organigrama ----
-
-        function filasAOrganigrama(filas) {
-            const conContenido = filas.filter(f => f && f.some(c => String(c || '').trim() !== ''));
-            if (!conContenido.length) throw new Error('La hoja está vacía.');
-
-            const { mapa, ignoradas } = mapearColumnas(conContenido[0]);
-            if (mapa.nombre === undefined && mapa.nombreCompleto === undefined) {
-                throw new Error(
-                    'No encontré la columna del nombre de la persona.\n\n' +
-                    'Se esperaba alguna de: "Person-First Name", "Nombre" o "Nombre completo".\n' +
-                    'Encabezados encontrados: ' + conContenido[0].filter(Boolean).join(', '));
-            }
-            if (mapa.puesto === undefined) {
-                throw new Error(
-                    'No encontré la columna del puesto.\n\n' +
-                    'Se esperaba alguna de: "Role- Job Title", "Job Title" o "Puesto".\n' +
-                    'Encabezados encontrados: ' + conContenido[0].filter(Boolean).join(', '));
-            }
-
-            const val = (fila, campo) => mapa[campo] === undefined
-                ? '' : String(fila[mapa[campo]] || '').trim();
-
-            const personas = [];
-            const omitidas = [];
-            conContenido.slice(1).forEach((fila, i) => {
-                const nombre = (mapa.nombreCompleto !== undefined && val(fila, 'nombreCompleto'))
-                    ? val(fila, 'nombreCompleto')
-                    : [val(fila, 'nombre'), val(fila, 'apellido')].filter(Boolean).join(' ').trim();
-                const puesto = val(fila, 'puesto');
-
-                if (!nombre && !puesto) return;                 // fila en blanco
-                if (!puesto) { omitidas.push(`fila ${i + 2}: "${nombre}" no tiene puesto`); return; }
-
-                const nodo = { role: puesto };
-                if (esSi(val(fila, 'vacante'))) {
-                    nodo.vacant = true;                          // una vacante no lleva nombre
-                } else {
-                    if (!nombre) { omitidas.push(`fila ${i + 2}: sin nombre y sin marcar como vacante`); return; }
-                    nodo.name = nombre;
-                }
-                const area = val(fila, 'area');           if (area) nodo.team = area;
-                const color = val(fila, 'color');         if (/^#[0-9a-f]{6}$/i.test(color)) nodo.accent = color;
-                const fecha = normalizarFecha(val(fila, 'fechaIngreso')); if (fecha) nodo.startDate = fecha;
-                const resumen = val(fila, 'resumen');     if (resumen) nodo.summary = resumen;
-                const foto = val(fila, 'foto');           if (foto) nodo.photo = foto;
-                const badge = val(fila, 'distintivo');
-                if (badge) {
-                    nodo.badge = badge;
-                    const tipo = val(fila, 'tipoDistintivo');
-                    nodo.badgeType = tipo ? tipo.toLowerCase() : (/ai|champion/i.test(badge) ? 'ai' : 'destacado');
-                    const periodo = val(fila, 'periodo');       if (periodo) nodo.badgePeriod = periodo;
-                    const porQuien = val(fila, 'otorgadoPor');  if (porQuien) nodo.badgeGrantedBy = porQuien;
-                    // El motivo solo aplica a Colaborador Destacado; los
-                    // AI Champion nunca llevan descripcion.
-                    const motivo = val(fila, 'motivo');
-                    if (motivo && nodo.badgeType !== 'ai') nodo.badgeReason = motivo;
-                }
-
-                // "Quien: mensaje | Quien: mensaje". Se corta en el primer
-                // ": " de cada parte para no romper mensajes que traigan mas.
-                const recs = val(fila, 'reconocimientos');
-                if (recs) {
-                    const lista = recs.split('|').map(p => {
-                        const s = p.trim();
-                        const i = s.indexOf(':');
-                        return i > 0
-                            ? { from: s.slice(0, i).trim(), message: s.slice(i + 1).trim() }
-                            : null;
-                    }).filter(r => r && r.from && r.message);
-                    if (lista.length) nodo.recognitions = lista;
-                }
-
-                personas.push({
-                    nodo,
-                    etiqueta: nombre || puesto,
-                    jefe: val(fila, 'jefe'),
-                    puestoJefe: val(fila, 'puestoJefe'),
-                    fila: i + 2
-                });
-            });
-
-            if (!personas.length) throw new Error('No se encontró ninguna persona con nombre y puesto.');
-
-            // Índice por nombre. Los homónimos se desempatan con el puesto del jefe.
-            const clave = s => normalizarEncabezado(s);
-            const porNombre = new Map();
-            personas.forEach(p => {
-                const k = clave(p.etiqueta);
-                if (!porNombre.has(k)) porNombre.set(k, []);
-                porNombre.get(k).push(p);
-            });
-
-            const buscarJefe = (p) => {
-                const candidatos = porNombre.get(clave(p.jefe));
-                if (!candidatos || !candidatos.length) return null;
-                if (candidatos.length === 1) return candidatos[0];
-                if (p.puestoJefe) {
-                    const exacto = candidatos.find(c => clave(c.nodo.role) === clave(p.puestoJefe));
-                    if (exacto) return exacto;
-                }
-                return candidatos[0];
-            };
-
-            // Asignar padres
-            const raices = [], huerfanos = [], ciclos = [];
-            personas.forEach(p => {
-                if (!p.jefe) { raices.push(p); return; }
-                const jefe = buscarJefe(p);
-                if (!jefe) { huerfanos.push(p); return; }
-                if (jefe === p) { ciclos.push(p); return; }
-                p.padre = jefe;
-            });
-
-            // Romper ciclos: si subiendo por la cadena de jefes se vuelve a la
-            // misma persona, la hoja se contradice y ese vínculo se descarta.
-            personas.forEach(p => {
-                const vistos = new Set([p]);
-                let actual = p.padre;
-                while (actual) {
-                    if (vistos.has(actual)) { ciclos.push(p); p.padre = null; huerfanos.push(p); break; }
-                    vistos.add(actual);
-                    actual = actual.padre;
-                }
-            });
-
-            // Elegir la raíz: si hay varias sin jefe, manda la que tenga más gente debajo
-            let raiz;
-            if (raices.length === 1) {
-                raiz = raices[0];
-            } else if (raices.length > 1) {
-                const cuenta = p => personas.filter(x => x.padre === p).length;
-                raices.sort((a, b) => cuenta(b) - cuenta(a));
-                raiz = raices[0];
-                raices.slice(1).forEach(p => { p.padre = raiz; huerfanos.push(p); });
-            } else {
-                // Nadie sin jefe: la hoja está toda enlazada. Se toma a quien
-                // esté más arriba en la cadena.
-                let p = personas[0], guarda = 0;
-                while (p.padre && guarda++ < personas.length) p = p.padre;
-                raiz = p;
-                raiz.padre = null;
-            }
-            huerfanos.forEach(p => { if (p !== raiz && !p.padre) p.padre = raiz; });
-
-            personas.forEach(p => {
-                if (p.padre && p !== raiz) {
-                    (p.padre.nodo.children = p.padre.nodo.children || []).push(p.nodo);
-                }
-            });
-
-            return {
-                arbol: raiz.nodo,
-                reporte: {
-                    total: personas.length,
-                    raiz: raiz.etiqueta + ' — ' + raiz.nodo.role,
-                    columnas: Object.keys(mapa),
-                    ignoradas,
-                    huerfanos: huerfanos.filter(p => p !== raiz).map(p => `${p.etiqueta} (fila ${p.fila})`),
-                    ciclos: ciclos.map(p => `${p.etiqueta} (fila ${p.fila})`),
-                    omitidas
-                }
-            };
-        }
 
         // ---- Enganche con la interfaz ----
 
@@ -4080,6 +4122,7 @@
                 setTimeout(() => flashHighlight(fila), 100);
             }
         })();
+    })();
     </script>
 </body>
 </html>

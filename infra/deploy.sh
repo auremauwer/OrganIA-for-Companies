@@ -31,13 +31,21 @@ echo "Bucket:       $BUCKET"
 echo "Distribucion: $DIST"
 echo
 
-# El HTML no se cachea para que cada cambio se vea de inmediato; las fotos
-# si, porque cambian poco y asi la carga es mas rapida.
+# Nada se cachea: la organizacion y las fotos se actualizan reemplazando
+# archivos, y si el navegador guardara copias, la gente seguiria viendo la
+# version anterior. Antes las fotos se cacheaban una semana, asi que sustituir
+# la foto de alguien tardaba hasta 7 dias en verse.
 echo "Subiendo fotos..."
 aws s3 sync photos/ "s3://$BUCKET/photos/" \
   --profile "$PERFIL" --region "$REGION" \
-  --cache-control 'public, max-age=604800' \
+  --cache-control 'no-cache, must-revalidate' \
   --delete
+
+echo "Subiendo la organizacion..."
+aws s3 cp organia-datos.csv "s3://$BUCKET/organia-datos.csv" \
+  --profile "$PERFIL" --region "$REGION" \
+  --cache-control 'no-cache, must-revalidate' \
+  --content-type 'text/csv; charset=utf-8'
 
 echo "Subiendo index.html..."
 aws s3 cp index.html "s3://$BUCKET/index.html" \

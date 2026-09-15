@@ -66,10 +66,51 @@ aws cloudformation deploy \
   --profile openbank --region us-east-1
 ```
 
-## Publicar cambios del sitio
+## Publicar una nueva organización
+
+La organización **no vive dentro del HTML**: está en `organia-datos.csv`, junto
+a `index.html`. La página lo descarga cada vez que alguien la abre, así que
+actualizar a todos los usuarios es reemplazar ese archivo.
+
+```bash
+./infra/publicar-organizacion.sh
+```
+
+Sube `organia-datos.csv` y las fotos, e invalida la caché. No toca el HTML.
+
+Flujo completo del administrador:
+
+1. Abrir la app y entrar en modo edición (⚙, PIN)
+2. Subir el Excel (⚙ → Subir organización) — **solo lo ve él**, es una vista previa
+3. Ajustar lo que haga falta: mover gente, vacantes, fotos
+4. ⚙ → Descargar organización, y si subió fotos, ⚙ → Descargar fotos subidas
+5. Copiar el CSV a la raíz del proyecto como `organia-datos.csv` y descomprimir
+   las fotos en `photos/`
+6. `./infra/publicar-organizacion.sh`
+
+Desde ese momento, cualquiera que abra la página ve la versión nueva.
+
+### Nada se cachea
+
+Tanto el CSV como las fotos y el HTML se sirven con `no-cache, must-revalidate`.
+Antes las fotos se cacheaban una semana, de modo que reemplazar la foto de
+alguien tardaba hasta 7 días en verse. Si el sitio creciera mucho y la carga se
+volviera lenta, ese es el primer lugar donde mirar.
+
+## Publicar cambios de la aplicación (el HTML)
 
 ```bash
 ./infra/deploy.sh
+```
+
+Sube el HTML, las fotos y el CSV. Solo hace falta cuando cambia el código.
+
+### Regenerar el CSV desde los datos incluidos en el HTML
+
+Solo se necesita si se editaron los datos de ejemplo dentro de `index.html`:
+
+```bash
+node infra/generar-csv.js "$(pwd)"
 ```
 
 ## Dar de alta a una persona
