@@ -1369,12 +1369,10 @@
 
         <button id="settingsGearBtn" class="settings-gear-btn" title="Configuración" aria-label="Configuración">⚙</button>
         <div id="settingsMenu" class="settings-menu" style="display:none;">
-            <button class="settings-menu-item" id="downloadExampleBtn">⬇ Descargar ejemplo JSON</button>
-            <button class="settings-menu-item" id="downloadCurrentBtn">⬇ Descargar mi organización actual (con fotos)</button>
-            <button class="settings-menu-item" id="downloadExcelBtn">📊 Descargar Excel (CSV)</button>
-            <button class="settings-menu-item" id="uploadJsonBtn">⬆ Subir mi organización (JSON)</button>
-            <button class="settings-menu-item" id="uploadSheetBtn">📥 Subir desde Excel o CSV</button>
-            <button class="settings-menu-item" id="downloadPlantillaBtn">⬇ Descargar plantilla para Excel</button>
+            <button class="settings-menu-item" id="downloadExcelBtn">⬇ Descargar organización (Excel)</button>
+            <button class="settings-menu-item" id="uploadSheetBtn">⬆ Subir organización (Excel)</button>
+            <button class="settings-menu-item" id="downloadPlantillaBtn">📋 Descargar plantilla vacía</button>
+            <button class="settings-menu-item" id="downloadFotosBtn" style="display:none;">🖼 Descargar fotos subidas</button>
             <button class="settings-menu-item" id="resetPhotosBtn" style="display:none;">🖼 Quitar fotos personalizadas</button>
             <button class="settings-menu-item" id="resetRecognitionsBtn" style="display:none;">🙌 Quitar reconocimientos</button>
             <button class="settings-menu-item" id="resetEditsBtn" style="display:none;">✏️ Deshacer correcciones de datos</button>
@@ -1382,7 +1380,6 @@
             <button class="settings-menu-item reset-item" id="resetOrgBtn" style="display:none;">↺ Restablecer original</button>
             <button class="settings-menu-item reset-item" id="exitEditModeBtn" style="display:none;">🔒 Salir del modo edición</button>
         </div>
-        <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;">
         <input type="file" id="sheetFileInput" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
         <input type="file" id="photoUploadInput" accept="image/*" style="display:none;">
     </header>
@@ -1635,7 +1632,6 @@
         }
 
         // Referencia fija a los datos de ejemplo (no cambia aunque se cargue un JSON propio)
-        const EXAMPLE_ORG_DATA = ORG_DATA;
         const CUSTOM_DATA_KEY = 'organia_custom_org_data';
         const UPLOAD_PIN = '2026';
         let usingCustomData = false;
@@ -1864,7 +1860,12 @@
             const k = keyOf(node);
             if (k && recognitionOverrides[k] && recognitionOverrides[k].length) {
                 const existing = Array.isArray(node.recognitions) ? node.recognitions : [];
-                node.recognitions = existing.concat(recognitionOverrides[k]);
+                // Sin deduplicar, un reconocimiento que ya viene en el Excel y
+                // ademas esta guardado aqui aparaceria dos veces en la tarjeta.
+                const huella = r => `${(r.from || '').trim()}|${(r.message || '').trim()}`;
+                const yaEstan = new Set(existing.map(huella));
+                node.recognitions = existing.concat(
+                    recognitionOverrides[k].filter(r => !yaEstan.has(huella(r))));
             }
             if (node.children) node.children.forEach(applyRecognitionOverrides);
         }
@@ -2544,17 +2545,13 @@
         // ---- Configuración discreta: engranaje protegido con PIN ----
         const settingsGearBtn = document.getElementById('settingsGearBtn');
         const settingsMenu = document.getElementById('settingsMenu');
-        const downloadExampleBtn = document.getElementById('downloadExampleBtn');
-        const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
         const downloadExcelBtn = document.getElementById('downloadExcelBtn');
-        const uploadJsonBtn = document.getElementById('uploadJsonBtn');
         const downloadPlantillaBtn = document.getElementById('downloadPlantillaBtn');
         const resetOrgBtn = document.getElementById('resetOrgBtn');
         const resetPhotosBtn = document.getElementById('resetPhotosBtn');
         const resetRecognitionsBtn = document.getElementById('resetRecognitionsBtn');
         const resetEditsBtn = document.getElementById('resetEditsBtn');
         const resetStructureBtn = document.getElementById('resetStructureBtn');
-        const jsonFileInput = document.getElementById('jsonFileInput');
         const photoUploadInput = document.getElementById('photoUploadInput');
         const customDataNotice = document.getElementById('customDataNotice');
         const photoEditNotice = document.getElementById('photoEditNotice');
@@ -3075,56 +3072,45 @@
             });
         }
 
-        if (downloadExampleBtn) {
-            downloadExampleBtn.addEventListener('click', () => {
-                const blob = new Blob([JSON.stringify(limpiarParaExportar(EXAMPLE_ORG_DATA), null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'organia-ejemplo.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                closeSettingsMenu();
-            });
-        }
-
-        // Descarga la organización TAL COMO se ve ahora mismo (default o subida, con fotos incluidas)
+                // Descarga la organización TAL COMO se ve ahora mismo (default o subida, con fotos incluidas)
         // para poder pedirle a alguien con acceso al repositorio que la publique de forma permanente.
         // Quita los campos internos que la app agrega en tiempo de ejecución
-        function limpiarParaExportar(node) {
-            const copia = {};
-            Object.keys(node).forEach(k => {
-                if (k === '_key' || k === 'displayAccent' || k === 'displayTeam' || k === 'children') return;
-                copia[k] = node[k];
-            });
-            if (node.children) copia.children = node.children.map(limpiarParaExportar);
-            return copia;
-        }
 
-        if (downloadCurrentBtn) {
-            downloadCurrentBtn.addEventListener('click', () => {
-                const blob = new Blob([JSON.stringify(limpiarParaExportar(ORG_DATA), null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'organia-mi-organizacion.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                closeSettingsMenu();
-            });
-        }
-
-        // ---- Exportar a Excel (CSV con BOM, para que Excel respete los acentos) ----
+                // ---- Exportar a Excel (CSV con BOM, para que Excel respete los acentos) ----
         function csvCell(value) {
             const text = value === null || value === undefined ? '' : String(value);
             return '"' + text.replace(/"/g, '""') + '"';
         }
 
-        function flattenOrgForExport(node, parentName = null, parentDept = null, level = 1, rows = []) {
+        // Nombre de archivo de foto derivado del nombre de la persona.
+        // Se prefiere sobre el numero de fila porque sobrevive a que se
+        // reordenen, inserten o borren filas en el Excel.
+        function slugFoto(nombre) {
+            return String(nombre || '')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        // Ruta que le toca a cada persona. Los homonimos reciben sufijo para
+        // que dos "Juan Perez" no compartan la misma foto.
+        const _rutasFoto = new Map();
+        function rutaFotoDe(node) {
+            const k = keyOf(node);
+            if (_rutasFoto.has(k)) return _rutasFoto.get(k);
+            const base = slugFoto(node.name);
+            if (!base) return '';
+            // keyOf ya trae el sufijo "(2)" de los homonimos
+            const m = /\((\d+)\)$/.exec(k || '');
+            const ruta = 'photos/' + base + (m ? '-' + m[1] : '') + '.jpg';
+            _rutasFoto.set(k, ruta);
+            return ruta;
+        }
+
+        // Aplana el arbol al MISMO esquema que lee el importador, para que el
+        // archivo descargado se pueda volver a subir sin perder nada.
+        function flattenOrgForExport(node, parentName = null, parentDept = null, level = 1, rows = [], parentRole = null) {
             const dept = node.displayTeam || node.team || parentDept || '';
             const directs = node.children ? node.children.length : 0;
             const total = (node.children && node.children.length) ? countEmployees({ children: node.children }) : 0;
@@ -3132,27 +3118,49 @@
                 .map(r => `${r.from}: ${r.message}`)
                 .join(' | ');
 
+            // Nombre y apellido separados, como los pide el importador.
+            // Se parte en el primer espacio desde la derecha para que los
+            // nombres compuestos queden del lado correcto.
+            const completo = node.vacant ? '' : (node.name || '');
+            const corte = completo.lastIndexOf(' ');
+            const nombrePila = corte > 0 ? completo.slice(0, corte) : completo;
+            const apellidos  = corte > 0 ? completo.slice(corte + 1) : '';
+
+            // Si la foto es una imagen subida (va embebida en base64 y no cabe
+            // en una celda), se escribe la ruta que le tocaria como archivo.
+            const foto = node.photo
+                ? (node.photo.startsWith('data:') ? rutaFotoDe(node) : node.photo)
+                : '';
+
             rows.push([
-                level,
-                node.vacant ? 'Posición vacante' : (node.name || ''),
+                rows.length + 1,
+                parentName || '',
+                parentRole || '',
+                nombrePila,
+                apellidos,
                 node.role || '',
                 dept,
-                parentName || '',
                 node.startDate || '',
-                tenureText(node.startDate),
                 node.summary || '',
-                directs,
-                total,
                 node.badge || '',
+                node.badgeType || '',
                 node.badgePeriod || '',
+                node.badgeReason || '',
                 node.badgeGrantedBy || '',
                 recognitions,
-                node.vacant ? 'Sí' : 'No'
+                foto,
+                node.vacant ? 'Sí' : 'No',
+                node.accent || '',
+                level,
+                tenureText(node.startDate),
+                directs,
+                total
             ]);
 
             if (node.children) {
                 node.children.forEach(child =>
-                    flattenOrgForExport(child, node.vacant ? parentName : node.name, dept, level + 1, rows)
+                    flattenOrgForExport(child, node.vacant ? parentName : node.name, dept, level + 1, rows,
+                        node.vacant ? parentRole : node.role)
                 );
             }
             return rows;
@@ -3160,11 +3168,16 @@
 
         if (downloadExcelBtn) {
             downloadExcelBtn.addEventListener('click', () => {
+                // Mismo esquema que lee el importador: este archivo se puede
+                // corregir en Excel y volver a subir sin perder nada.
+                // Las cuatro últimas columnas son informativas; al subir el
+                // archivo se recalculan solas.
                 const headers = [
-                    'Nivel', 'Nombre', 'Puesto', 'Departamento', 'Reporta a',
-                    'Fecha de ingreso', 'Antigüedad', 'A qué se dedica',
-                    'Reportes directos', 'Total a cargo',
-                    'Distintivo', 'Periodo del distintivo', 'Distintivo otorgado por', 'Reconocimientos recibidos', 'Vacante'
+                    '', 'Manager', 'Manager Position', 'Person-First Name',
+                    'Person-LastName', 'Role- Job Title', 'Department', 'Start Date',
+                    'Summary', 'Badge', 'Badge Type', 'Badge Period', 'Badge Reason',
+                    'Badge Granted By', 'Recognitions', 'Photo', 'Vacant', 'Accent',
+                    'Nivel', 'Antigüedad', 'Reportes directos', 'Total a cargo'
                 ];
                 const rows = flattenOrgForExport(ORG_DATA);
                 const csv = [headers, ...rows]
@@ -3185,53 +3198,14 @@
             });
         }
 
-        if (uploadJsonBtn) {
-            uploadJsonBtn.addEventListener('click', () => {
-                closeSettingsMenu();
-                jsonFileInput.click();
-            });
-        }
-
-        function validateOrgNode(node) {
+                function validateOrgNode(node) {
             if (!node || typeof node !== 'object') return 'El nodo raíz no es un objeto válido.';
             if (!node.role || typeof node.role !== 'string') return 'Falta el campo "role" (obligatorio) en el nodo raíz.';
             if (node.children && !Array.isArray(node.children)) return 'El campo "children" debe ser una lista.';
             return null;
         }
 
-        if (jsonFileInput) {
-            jsonFileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = async function(evt) {
-                    let parsed;
-                    try {
-                        parsed = JSON.parse(evt.target.result);
-                    } catch (err) {
-                        await showAlertModal('El archivo no es un JSON válido: ' + err.message);
-                        jsonFileInput.value = '';
-                        return;
-                    }
-                    const error = validateOrgNode(parsed);
-                    if (error) {
-                        await showAlertModal('El JSON no tiene el formato esperado.\n' + error);
-                        jsonFileInput.value = '';
-                        return;
-                    }
-                    localStorage.setItem(CUSTOM_DATA_KEY, JSON.stringify(parsed));
-                    await showAlertModal('¡Organización actualizada! La página se va a recargar.');
-                    location.reload();
-                };
-                reader.onerror = async function() {
-                    await showAlertModal('No se pudo leer el archivo.');
-                };
-                reader.readAsText(file);
-            });
-        }
-
-        if (resetOrgBtn) {
+                if (resetOrgBtn) {
             resetOrgBtn.addEventListener('click', async () => {
                 closeSettingsMenu();
                 if (await showConfirmModal('¿Restablecer la organización original y descartar tu JSON cargado?')) {
@@ -3417,10 +3391,21 @@
             distintivo:     ['badge', 'distintivo'],
             tipoDistintivo: ['badge type', 'tipo de distintivo', 'tipo distintivo'],
             periodo:        ['badge period', 'periodo del distintivo', 'periodo'],
+            motivo:         ['badge reason', 'motivo del distintivo', 'motivo'],
             otorgadoPor:    ['badge granted by', 'distintivo otorgado por', 'otorgado por'],
+            reconocimientos:['recognitions', 'reconocimientos', 'reconocimientos recibidos'],
+            foto:           ['photo', 'foto', 'imagen', 'photo url', 'ruta de foto'],
             vacante:        ['vacant', 'vacante', 'plaza vacante'],
             color:          ['accent', 'color', 'color de area', 'color del area']
         };
+
+        // Columnas que la app exporta como referencia pero recalcula sola al
+        // leer: no son datos que se carguen, y avisar de ellas como
+        // "ignoradas" solo confundiria.
+        const COLUMNAS_CALCULADAS = [
+            'nivel', 'level', 'antiguedad', 'tenure', 'reportes directos',
+            'direct reports', 'total a cargo', 'total', 'contador', 'id'
+        ];
 
         function mapearColumnas(encabezados) {
             const mapa = {}, usadas = new Set();
@@ -3436,7 +3421,8 @@
                 if (i !== -1) { mapa[campo] = i; usadas.add(i); }
             }
             const ignoradas = encabezados
-                .map((h, i) => (h && !usadas.has(i)) ? h : null)
+                .map((h, i) => (h && !usadas.has(i) &&
+                    !COLUMNAS_CALCULADAS.includes(normalizarEncabezado(h))) ? h : null)
                 .filter(Boolean);
             return { mapa, ignoradas };
         }
@@ -3508,6 +3494,7 @@
                 const color = val(fila, 'color');         if (/^#[0-9a-f]{6}$/i.test(color)) nodo.accent = color;
                 const fecha = normalizarFecha(val(fila, 'fechaIngreso')); if (fecha) nodo.startDate = fecha;
                 const resumen = val(fila, 'resumen');     if (resumen) nodo.summary = resumen;
+                const foto = val(fila, 'foto');           if (foto) nodo.photo = foto;
                 const badge = val(fila, 'distintivo');
                 if (badge) {
                     nodo.badge = badge;
@@ -3515,6 +3502,24 @@
                     nodo.badgeType = tipo ? tipo.toLowerCase() : (/ai|champion/i.test(badge) ? 'ai' : 'destacado');
                     const periodo = val(fila, 'periodo');       if (periodo) nodo.badgePeriod = periodo;
                     const porQuien = val(fila, 'otorgadoPor');  if (porQuien) nodo.badgeGrantedBy = porQuien;
+                    // El motivo solo aplica a Colaborador Destacado; los
+                    // AI Champion nunca llevan descripcion.
+                    const motivo = val(fila, 'motivo');
+                    if (motivo && nodo.badgeType !== 'ai') nodo.badgeReason = motivo;
+                }
+
+                // "Quien: mensaje | Quien: mensaje". Se corta en el primer
+                // ": " de cada parte para no romper mensajes que traigan mas.
+                const recs = val(fila, 'reconocimientos');
+                if (recs) {
+                    const lista = recs.split('|').map(p => {
+                        const s = p.trim();
+                        const i = s.indexOf(':');
+                        return i > 0
+                            ? { from: s.slice(0, i).trim(), message: s.slice(i + 1).trim() }
+                            : null;
+                    }).filter(r => r && r.from && r.message);
+                    if (lista.length) nodo.recognitions = lista;
                 }
 
                 personas.push({
@@ -3658,6 +3663,13 @@
 
                     if (!await showConfirmModal(lineas.join('\n'))) return;
 
+                    // Red de seguridad antes de guardar: si el arbol saliera
+                    // mal armado, la app no arrancaria en la siguiente carga.
+                    const problema = validateOrgNode(arbol);
+                    if (problema) {
+                        await showAlertModal('El organigrama resultante no es válido.\n' + problema);
+                        return;
+                    }
                     localStorage.setItem(CUSTOM_DATA_KEY, JSON.stringify(arbol));
                     await showAlertModal('¡Organización cargada! La página se va a recargar.');
                     location.reload();
@@ -3667,26 +3679,145 @@
             });
         }
 
+        // ---- Descargar las fotos subidas, ya nombradas para el Excel ----
+        //
+        // Las fotos que se suben viven en el navegador como base64 y no caben
+        // en una celda de Excel (el límite es 32,767 caracteres). Por eso la
+        // columna "Photo" lleva una ruta, y este botón entrega los archivos
+        // con ese mismo nombre para copiarlos a la carpeta photos/.
+        //
+        // El .zip se arma a mano: las imágenes ya vienen comprimidas, así que
+        // se guardan sin comprimir y basta con calcular su CRC.
+        const TABLA_CRC = (() => {
+            const t = new Uint32Array(256);
+            for (let i = 0; i < 256; i++) {
+                let c = i;
+                for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                t[i] = c >>> 0;
+            }
+            return t;
+        })();
+
+        function crc32(bytes) {
+            let c = 0xFFFFFFFF;
+            for (let i = 0; i < bytes.length; i++) c = TABLA_CRC[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+            return (c ^ 0xFFFFFFFF) >>> 0;
+        }
+
+        function armarZip(archivos) {
+            const partes = [], central = [];
+            let offset = 0;
+            const codificador = new TextEncoder();
+
+            for (const { nombre, datos } of archivos) {
+                const nom = codificador.encode(nombre);
+                const crc = crc32(datos);
+
+                const cab = new DataView(new ArrayBuffer(30));
+                cab.setUint32(0, 0x04034b50, true);   // firma de cabecera local
+                cab.setUint16(4, 20, true);           // versión mínima
+                cab.setUint16(8, 0, true);            // método 0 = sin comprimir
+                cab.setUint32(14, crc, true);
+                cab.setUint32(18, datos.length, true);
+                cab.setUint32(22, datos.length, true);
+                cab.setUint16(26, nom.length, true);
+                partes.push(new Uint8Array(cab.buffer), nom, datos);
+
+                const dir = new DataView(new ArrayBuffer(46));
+                dir.setUint32(0, 0x02014b50, true);   // firma de entrada del índice
+                dir.setUint16(4, 20, true);
+                dir.setUint16(6, 20, true);
+                dir.setUint16(10, 0, true);
+                dir.setUint32(16, crc, true);
+                dir.setUint32(20, datos.length, true);
+                dir.setUint32(24, datos.length, true);
+                dir.setUint16(28, nom.length, true);
+                dir.setUint32(42, offset, true);
+                central.push(new Uint8Array(dir.buffer), nom);
+
+                offset += 30 + nom.length + datos.length;
+            }
+
+            const tamCentral = central.reduce((s, p) => s + p.length, 0);
+            const fin = new DataView(new ArrayBuffer(22));
+            fin.setUint32(0, 0x06054b50, true);       // firma de cierre
+            fin.setUint16(8, archivos.length, true);
+            fin.setUint16(10, archivos.length, true);
+            fin.setUint32(12, tamCentral, true);
+            fin.setUint32(16, offset, true);
+
+            return new Blob([...partes, ...central, new Uint8Array(fin.buffer)],
+                { type: 'application/zip' });
+        }
+
+        function fotosSubidas() {
+            const lista = [];
+            (function recorrer(node) {
+                if (node.photo && node.photo.startsWith('data:')) {
+                    lista.push({ nodo: node, ruta: rutaFotoDe(node) });
+                }
+                (node.children || []).forEach(recorrer);
+            })(ORG_DATA);
+            return lista;
+        }
+
+        const downloadFotosBtn = document.getElementById('downloadFotosBtn');
+        if (downloadFotosBtn && fotosSubidas().length) {
+            downloadFotosBtn.style.display = '';
+            downloadFotosBtn.addEventListener('click', async () => {
+                closeSettingsMenu();
+                const archivos = fotosSubidas().map(({ nodo, ruta }) => {
+                    const coma = nodo.photo.indexOf(',');
+                    const crudo = atob(nodo.photo.slice(coma + 1));
+                    const bytes = new Uint8Array(crudo.length);
+                    for (let i = 0; i < crudo.length; i++) bytes[i] = crudo.charCodeAt(i);
+                    // La extensión real puede no ser .jpg; se respeta la del archivo subido
+                    const tipo = /^data:image\/(\w+)/.exec(nodo.photo);
+                    const ext = tipo ? tipo[1].replace('jpeg', 'jpg') : 'jpg';
+                    return { nombre: ruta.replace(/\.jpg$/, '.' + ext), datos: bytes };
+                });
+
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(armarZip(archivos));
+                a.download = 'fotos-organia.zip';
+                a.click();
+                URL.revokeObjectURL(a.href);
+
+                await showAlertModal(
+                    `Se descargaron ${archivos.length} fotos.\n\n` +
+                    'Descomprime el archivo dentro de la carpeta del proyecto: los nombres ya ' +
+                    'coinciden con la columna "Photo" del Excel.');
+            });
+        }
+
         // Plantilla con las columnas que entiende la app, ya con un ejemplo
         if (downloadPlantillaBtn) {
             downloadPlantillaBtn.addEventListener('click', () => {
                 closeSettingsMenu();
+                // Mismas columnas que exporta la app, para que plantilla y
+                // descarga sean el mismo formato.
                 const encabezados = ['', 'Manager', 'Manager Position', 'Person-First Name',
                     'Person-LastName', 'Role- Job Title', 'Department', 'Start Date',
-                    'Summary', 'Badge', 'Badge Type', 'Badge Period', 'Badge Granted By',
-                    'Vacant', 'Accent'];
+                    'Summary', 'Badge', 'Badge Type', 'Badge Period', 'Badge Reason',
+                    'Badge Granted By', 'Recognitions', 'Photo', 'Vacant', 'Accent'];
                 const ejemplo = [
                     ['1', '', '', 'Carlos', 'Mendoza', 'Chief Executive Officer',
                      'Dirección General', '2018-02-05', 'Define la estrategia de la compañía.',
-                     '', '', '', '', 'No', '#1e3c72'],
+                     '', '', '', '', '', '', 'photos/carlos-mendoza.jpg', 'No', '#1e3c72'],
                     ['2', 'Carlos Mendoza', 'Chief Executive Officer', 'Ana', 'Ríos',
                      'Chief Technology Officer', 'Tecnología', '2019-06-03',
-                     'Lidera la estrategia tecnológica.', 'AI Champion', 'ai', '', 'Carlos Mendoza', 'No', '#e21c1c'],
+                     'Lidera la estrategia tecnológica.', 'AI Champion', 'ai', '', '',
+                     'Carlos Mendoza', '', 'photos/ana-rios.jpg', 'No', '#e21c1c'],
                     ['3', 'Ana Ríos', 'Chief Technology Officer', 'Luis', 'Pérez',
                      'Backend Lead', 'Tecnología', '2022-05-25',
-                     'Desarrolla y mantiene los servicios del producto.', '', '', '', '', 'No', ''],
+                     'Desarrolla y mantiene los servicios del producto.',
+                     'Colaborador Destacado', 'destacado', 'Marzo 2026',
+                     'Sacó adelante la migración de la base de datos.', 'Ana Ríos',
+                     'Sofía Gómez: me ayudó con el despliegue | Ana Ríos: gran trabajo en el sprint',
+                     '', 'No', ''],
                     ['4', 'Ana Ríos', 'Chief Technology Officer', '', '',
-                     'Frontend Developer', 'Tecnología', '', 'Posición abierta.', '', '', '', '', 'Sí', '']
+                     'Frontend Developer', 'Tecnología', '', 'Posición abierta.',
+                     '', '', '', '', '', '', '', 'Sí', '']
                 ];
                 const csv = [encabezados, ...ejemplo]
                     .map(f => f.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
