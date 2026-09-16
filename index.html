@@ -3535,6 +3535,16 @@
 
         // Ruta que le toca a cada persona. Los homonimos reciben sufijo para
         // que dos "Juan Perez" no compartan la misma foto.
+        // Extension real de la imagen. Es importante que coincida con la del
+        // archivo que entrega el zip: si el Excel dijera .jpg y el archivo
+        // fuera .png, la foto saldria rota despues de publicar.
+        function extensionFoto(photo) {
+            const m = /^data:image\/([a-z0-9+]+)/i.exec(photo || '');
+            if (!m) return 'jpg';
+            const t = m[1].toLowerCase();
+            return t === 'jpeg' ? 'jpg' : (t === 'svg+xml' ? 'svg' : t);
+        }
+
         const _rutasFoto = new Map();
         function rutaFotoDe(node) {
             const k = keyOf(node);
@@ -3543,7 +3553,8 @@
             if (!base) return '';
             // keyOf ya trae el sufijo "(2)" de los homonimos
             const m = /\((\d+)\)$/.exec(k || '');
-            const ruta = 'photos/' + base + (m ? '-' + m[1] : '') + '.jpg';
+            const ruta = 'photos/' + base + (m ? '-' + m[1] : '')
+                       + '.' + extensionFoto(node.photo);
             _rutasFoto.set(k, ruta);
             return ruta;
         }
@@ -3813,10 +3824,9 @@
                     const crudo = atob(nodo.photo.slice(coma + 1));
                     const bytes = new Uint8Array(crudo.length);
                     for (let i = 0; i < crudo.length; i++) bytes[i] = crudo.charCodeAt(i);
-                    // La extensión real puede no ser .jpg; se respeta la del archivo subido
-                    const tipo = /^data:image\/(\w+)/.exec(nodo.photo);
-                    const ext = tipo ? tipo[1].replace('jpeg', 'jpg') : 'jpg';
-                    return { nombre: ruta.replace(/\.jpg$/, '.' + ext), datos: bytes };
+                    // Se usa tal cual la ruta que el Excel escribió para esta
+                    // persona: son el mismo nombre por construcción.
+                    return { nombre: ruta, datos: bytes };
                 });
 
                 const a = document.createElement('a');
