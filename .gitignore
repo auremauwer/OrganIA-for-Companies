@@ -1,2 +1,5 @@
 # Configuracion local de Claude Code (permisos, servidor de pruebas)
 .claude/
+
+# Paquete de codigo generado a mano
+organia-codigo.zip
