@@ -2071,9 +2071,13 @@
 
         if (!usingCustomData) {
             try {
-                // 'no-store' para que al reemplazar el archivo en el servidor
-                // todo el mundo vea el cambio en la siguiente visita.
-                const resp = await fetch(ARCHIVO_PUBLICADO, { cache: 'no-store' });
+                // 'no-store' evita la caché del navegador, pero no la del CDN que
+                // sirve el sitio. GitHub Pages impone max-age=600 y no deja
+                // cambiarlo, así que un cambio recién publicado podría tardar
+                // hasta diez minutos en verse. Añadir un valor distinto en cada
+                // carga convierte la petición en una URL nueva, que ningún caché
+                // tiene guardada. El costo es volver a bajar el archivo cada vez.
+                const resp = await fetch(`${ARCHIVO_PUBLICADO}?v=${Date.now()}`, { cache: 'no-store' });
                 if (resp.ok) {
                     const publicado = filasAOrganigrama(leerCsv(decodificarTexto(await resp.arrayBuffer())));
                     ORG_DATA = publicado.arbol;
